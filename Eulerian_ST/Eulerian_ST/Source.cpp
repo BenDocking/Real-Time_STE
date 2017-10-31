@@ -189,13 +189,13 @@ void ReadSavedDataByUltrasonix() {
 
 		//cvReleaseImage(&ImageRaw);
 		//ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
-		for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
-			indexp1 = pixelp * 3;
+		//for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
+		//	indexp1 = pixelp * 3;
 			//ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1+1] = ImageRaw->imageData[indexp1+2] = Speckle_Results[fr].Image[pixelp];
-		}
+		//}
 		//cvFlip(ImageRaw, NULL, 1);
 		//cvShowImage("Raw_Image",ImageRaw);
-		cv::waitKey(1); // wait for 1 millisecond
+		//cv::waitKey(1); // wait for 1 millisecond
 	}
 	delete[] data;
 	//DeleteSpeckleResults(SR, hdr_frames);
