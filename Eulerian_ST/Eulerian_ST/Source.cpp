@@ -70,7 +70,9 @@ struct SpeckleTracking {
 	int CornerSWX;
 } ST;
 
-#pragma region ReadFile
+struct Speckle_Results {
+	char * Image;
+};
 
 class uFileHeader
 {
@@ -115,24 +117,39 @@ public:
 	int extra;
 };
 
+
+void InitialiseSpeckleResults(Speckle_Results SR[], int lengthFrames, int size_Sonix) {
+	for (int i = 0; i < lengthFrames; i++)
+	{
+		SR[i].Image = new char[size_Sonix];
+	}
+}
+
+void DeleteSpeckleResults(Speckle_Results SR[], int lengthFrames) {
+	for (int i = 0; i < lengthFrames; i++)
+	{
+		delete[] SR[i].Image;
+	}
+}
+
 void ReadSavedDataByUltrasonix() {
 
 	int indexp1;
-	CHAR Documents[MAX_PATH];
-	HRESULT result = SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, Documents);
-	char Name[30], Direc[55];
+	CHAR Direc[MAX_PATH];
+	HRESULT result = SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, Direc);
+	char Name[30];
 	cout << endl;
 	cout << "Enter file name: ";
 	cin >> Name;
-	strcat(Documents, "/InOut/");
-	strcat(Documents, Name);
+	strcat(Direc, "/InOut/");
+	strcat(Direc, Name);
 	cout << endl;
 	cout << "Reading data from hard disk..." << endl;
 	cout << endl;
 	// open data file
-	FILE * fp = fopen(Documents, "r");
+	FILE * fp = fopen(Direc, "r");
 	if (!fp) {
-		printf("Error opening input file from %s\n", Documents);
+		printf("Error opening input file from %s\n", Direc);
 		cout << endl;
 		system("pause");
 		exit(-1);
@@ -161,17 +178,19 @@ void ReadSavedDataByUltrasonix() {
 	int size_Sonix = hdr.w * hdr.h * (hdr.ss / 8);
 	data = new unsigned char[size_Sonix];
 
+	Speckle_Results SR[505];
+	InitialiseSpeckleResults(SR, hdr_frames, size_Sonix);
+
 	// read data
 	//loop through all frames
 	for (int fr = 0; fr < hdr.frames; fr++) {
 		fread(data, size_Sonix, 1, fp);
-		printf("data: %d\n", data);
-		//memcpy(Speckle_Results[fr].Image, data, size_Sonix);
+		memcpy(SR[fr].Image, data, size_Sonix);
 
 		//cvReleaseImage(&ImageRaw);
 		//ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
-		for (int pixelp = 0 ; pixelp < hdr.w * hdr.h ; pixelp++ ) {
-			indexp1 = pixelp*3;
+		for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
+			indexp1 = pixelp * 3;
 			//ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1+1] = ImageRaw->imageData[indexp1+2] = Speckle_Results[fr].Image[pixelp];
 		}
 		//cvFlip(ImageRaw, NULL, 1);
@@ -179,36 +198,35 @@ void ReadSavedDataByUltrasonix() {
 		cv::waitKey(1); // wait for 1 millisecond
 	}
 	delete[] data;
+	//DeleteSpeckleResults(SR, hdr_frames);
 
 	fclose(fp);
 	/*
 	if (Read_Frame_Numbers) {
-		// Reading frame number
-		Direc[strlen(Direc) - 6] = 'm';
-		Direc[strlen(Direc) - 8] = 'r';
-		Direc[strlen(Direc) - 9] = 'f';
-		cout << endl;
-		cout << "Reading frame number..." << endl;
-		cout << endl;
-		// open data file
-		fp = fopen(Direc, "rb");
-		if (!fp) {
-			cout << "Error opening input file" << endl;
-			system("pause");
-			exit(-1);
-		}
-		// read data
-		for (int fr = 0; fr < hdr.frames; fr++)
-			fread(&Speckle_Results[fr].Frame_No, sizeof(int), 1, fp);
+	// Reading frame number
+	Direc[strlen(Direc) - 6] = 'm';
+	Direc[strlen(Direc) - 8] = 'r';
+	Direc[strlen(Direc) - 9] = 'f';
+	cout << endl;
+	cout << "Reading frame number..." << endl;
+	cout << endl;
+	// open data file
+	fp = fopen(Direc, "rb");
+	if (!fp) {
+	cout << "Error opening input file" << endl;
+	system("pause");
+	exit(-1);
+	}
+	// read data
+	for (int fr = 0; fr < hdr.frames; fr++)
+	fread(&Speckle_Results[fr].Frame_No, sizeof(int), 1, fp);
 
-		fclose(fp);
+	fclose(fp);
 	}
 	*/
 	cout << endl;
 	cout << "Finished reading data from hard disk..." << endl;
 }
-
-#pragma endregion
 
 int main(int argc, char **argv) {
 	ReadSavedDataByUltrasonix();
