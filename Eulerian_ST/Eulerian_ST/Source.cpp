@@ -70,8 +70,16 @@ struct SpeckleTracking {
 	int CornerSWX;
 } ST;
 
-struct Speckle_Results {
+//struct Speckle_Results {
+//	char * Image;
+//	int * Frame_No;
+//};
+
+class Speckle_Results 
+{
+public:
 	char * Image;
+	int Frame_No;
 };
 
 class uFileHeader
@@ -118,17 +126,17 @@ public:
 };
 
 
-void InitialiseSpeckleResults(Speckle_Results SR[], int lengthFrames, int size_Sonix) {
+void InitialiseSpeckleResults(Speckle_Results sr[], int lengthFrames, int size_Sonix) {
 	for (int i = 0; i < lengthFrames; i++)
 	{
-		SR[i].Image = new char[size_Sonix];
+		sr[i].Image = new char[size_Sonix];
 	}
 }
 
-void DeleteSpeckleResults(Speckle_Results SR[], int lengthFrames) {
+void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames) {
 	for (int i = 0; i < lengthFrames; i++)
 	{
-		delete[] SR[i].Image;
+		delete[] sr[i].Image;
 	}
 }
 
@@ -159,7 +167,7 @@ void ReadSavedDataByUltrasonix() {
 
 	uFileHeader hdr;
 	fread(&hdr, sizeof(hdr), 1, fp);
-
+	int size_hdr = sizeof(hdr);
 	printf("image width: %d\n", hdr.w);
 	printf("image height: %d\n", hdr.h);
 	printf("image (data) sample size: %d\n", hdr.ss);
@@ -169,41 +177,65 @@ void ReadSavedDataByUltrasonix() {
 
 	int hdr_frames = hdr.frames;
 	int FrameRate = hdr.dr;
+	int size_Sonix = 0;
+	IplImage * ImageRaw;
+	Speckle_Results sr[505];
 
 	// print file information
 	printf("file details:\n");
 
-	printf("type: post-scan B-mode data (8-bit)  *.b8\n");
-	unsigned char * data;
-	int size_Sonix = hdr.w * hdr.h * (hdr.ss / 8);
-	data = new unsigned char[size_Sonix];
+	switch (hdr.type)
+	{
+	case 4:
+		printf("type: post-scan B-mode data (8-bit)  *.b8\n");
+		unsigned char * data;
+		size_Sonix = hdr.w * hdr.h * (hdr.ss / 8);
+		data = new unsigned char[size_Sonix];
 
-	Speckle_Results SR[505];
-	InitialiseSpeckleResults(SR, hdr_frames, size_Sonix);
+		InitialiseSpeckleResults(sr, hdr_frames, size_Sonix);
 
-	// read data
-	//loop through all frames
-	for (int fr = 0; fr < hdr.frames; fr++) {
-		fread(data, size_Sonix, 1, fp);
-		memcpy(SR[fr].Image, data, size_Sonix);
+		// read data
+		//loop through all frames
+		for (int fr = 0; fr < hdr.frames; fr++) {
+			//fseek(fp, 0L, SEEK_SET);
+			fread(data, size_Sonix, 1, fp);
+			memcpy(sr[fr].Image, data, size_Sonix);
 
-		//cvReleaseImage(&ImageRaw);
-		//ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
-		//for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
-		//	indexp1 = pixelp * 3;
-			//ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1+1] = ImageRaw->imageData[indexp1+2] = Speckle_Results[fr].Image[pixelp];
-		//}
-		//cvFlip(ImageRaw, NULL, 1);
-		//cvShowImage("Raw_Image",ImageRaw);
-		//cv::waitKey(1); // wait for 1 millisecond
+			ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
+			for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
+				indexp1 = pixelp * 3;
+			ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1+1] = ImageRaw->imageData[indexp1+2] = sr[fr].Image[pixelp];
+			}
+
+			cvFlip(ImageRaw, NULL, 1);
+			cvShowImage("Raw_Image",ImageRaw);
+			cv::waitKey(30); // wait for 30 milliseconds
+			cvReleaseImage(&ImageRaw);
+			cvDestroyWindow("Raw_Image");
+		}
+		delete[] data;
+		DeleteSpeckleResults(sr, hdr_frames);
+		break;
+
+	case 16:
+		printf("type: RF data (16-bit)  *.rf\n");
+		short * data2;   // also need to change gBuffer in Types.h
+		size_Sonix = hdr.w * hdr.h * (hdr.ss / 8);
+		data2 = new short[size_Sonix];
+
+		// read data
+		for (int fr = 0; fr < hdr.frames; fr++) {
+			fread(data2, size_Sonix, 1, fp);
+		}
+		delete[] data2;
+		break;
 	}
-	delete[] data;
-	//DeleteSpeckleResults(SR, hdr_frames);
 
 	fclose(fp);
-	/*
-	if (Read_Frame_Numbers) {
+	
+	//if (Read_Frame_Numbers) {
 	// Reading frame number
+	/*
 	Direc[strlen(Direc) - 6] = 'm';
 	Direc[strlen(Direc) - 8] = 'r';
 	Direc[strlen(Direc) - 9] = 'f';
@@ -219,10 +251,9 @@ void ReadSavedDataByUltrasonix() {
 	}
 	// read data
 	for (int fr = 0; fr < hdr.frames; fr++)
-	fread(&Speckle_Results[fr].Frame_No, sizeof(int), 1, fp);
-
+	fread(&SR[fr].Frame_No, sizeof(int), 1, fp);
 	fclose(fp);
-	}
+	//}
 	*/
 	cout << endl;
 	cout << "Finished reading data from hard disk..." << endl;
