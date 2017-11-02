@@ -70,11 +70,6 @@ struct SpeckleTracking {
 	int CornerSWX;
 } ST;
 
-//struct Speckle_Results {
-//	char * Image;
-//	int * Frame_No;
-//};
-
 class Speckle_Results 
 {
 public:
@@ -143,6 +138,7 @@ void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames) {
 void ReadSavedDataByUltrasonix() {
 
 	int indexp1;
+	// direc = Documents/InOut/FILENAME
 	CHAR Direc[MAX_PATH];
 	HRESULT result = SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, Direc);
 	char Name[30];
@@ -164,7 +160,6 @@ void ReadSavedDataByUltrasonix() {
 	}
 
 	// read header
-
 	uFileHeader hdr;
 	fread(&hdr, sizeof(hdr), 1, fp);
 	int size_hdr = sizeof(hdr);
@@ -179,7 +174,7 @@ void ReadSavedDataByUltrasonix() {
 	int FrameRate = hdr.dr;
 	int size_Sonix = 0;
 	IplImage * ImageRaw;
-	Speckle_Results sr[505];
+	Speckle_Results * sr = new Speckle_Results[hdr_frames];
 
 	// print file information
 	printf("file details:\n");
@@ -195,12 +190,11 @@ void ReadSavedDataByUltrasonix() {
 		InitialiseSpeckleResults(sr, hdr_frames, size_Sonix);
 
 		// read data
-		//loop through all frames
 		for (int fr = 0; fr < hdr.frames; fr++) {
-			//fseek(fp, 0L, SEEK_SET);
-			fread(data, size_Sonix, 1, fp);
-			memcpy(sr[fr].Image, data, size_Sonix);
+			fread(data, size_Sonix, 1, fp); // read from stream
+			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
 
+			// display image
 			ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
 			for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
 				indexp1 = pixelp * 3;
@@ -211,10 +205,8 @@ void ReadSavedDataByUltrasonix() {
 			cvShowImage("Raw_Image",ImageRaw);
 			cv::waitKey(30); // wait for 30 milliseconds
 			cvReleaseImage(&ImageRaw);
-			cvDestroyWindow("Raw_Image");
 		}
 		delete[] data;
-		DeleteSpeckleResults(sr, hdr_frames);
 		break;
 
 	case 16:
@@ -230,7 +222,7 @@ void ReadSavedDataByUltrasonix() {
 		delete[] data2;
 		break;
 	}
-
+	
 	fclose(fp);
 	
 	//if (Read_Frame_Numbers) {
@@ -261,32 +253,6 @@ void ReadSavedDataByUltrasonix() {
 
 int main(int argc, char **argv) {
 	ReadSavedDataByUltrasonix();
-	/*
-#pragma region INIT
-	double COL = 0;
-	double ROW = 0;
-	double fontSize = 22;
-	double fr = 0;
-	double fr_T = 0;
-	double nframes = 0;
-	double MaxFR = 0;
-	//h (1x1 Figure)
-		//RendererMode
-		//GraphicsSmoothing
-		//UIContextMenu
-		//BusyAction
-		//BeingDeleted
-		//Interruptible
-		//Type
-		//UserData
-		//Clipping
-		//PaperPositionMode
-	int Im[600][800][505];
-	int image1[480000];
-	int image2[480000];
-	//int R[600][800][3][505]; //height, width, channel, frames ***ERROR SIZE OF ARRAY EXCEEDING 0x7fffffff bytes***
-#pragma endregion
-	8*/
 	system("pause");
 	exit(-1);
 	return 0;
