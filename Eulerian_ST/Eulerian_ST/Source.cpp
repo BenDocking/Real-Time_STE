@@ -151,7 +151,7 @@ void ReadSavedDataByUltrasonix() {
 	cout << "Reading data from hard disk..." << endl;
 	cout << endl;
 	// open data file
-	FILE * fp = fopen(Direc, "r");
+	FILE * fp = fopen(Direc, "rb");
 	if (!fp) {
 		printf("Error opening input file from %s\n", Direc);
 		cout << endl;
@@ -194,6 +194,7 @@ void ReadSavedDataByUltrasonix() {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
 
+			
 			// display image
 			ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
 			for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
@@ -203,7 +204,7 @@ void ReadSavedDataByUltrasonix() {
 
 			cvFlip(ImageRaw, NULL, 1);
 			cvShowImage("Raw_Image",ImageRaw);
-			cv::waitKey(30); // wait for 30 milliseconds
+			cv::waitKey(50); // wait for 1000 milliseconds
 			cvReleaseImage(&ImageRaw);
 		}
 		delete[] data;
@@ -223,6 +224,20 @@ void ReadSavedDataByUltrasonix() {
 		break;
 	}
 	
+	/*
+	// display image
+	ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
+	for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
+		indexp1 = pixelp * 3;
+		ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1 + 1] = ImageRaw->imageData[indexp1 + 2] = sr[130].Image[pixelp];
+	}
+
+	//cvFlip(ImageRaw, NULL, 1);
+	cvShowImage("Raw_Image", ImageRaw);
+	cv::waitKey(1000); // wait for 1000 milliseconds
+	cvReleaseImage(&ImageRaw);
+	*/
+
 	fclose(fp);
 	
 	//if (Read_Frame_Numbers) {
