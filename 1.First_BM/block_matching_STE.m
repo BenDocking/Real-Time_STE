@@ -17,6 +17,8 @@ Width = size(f_r,2);
 figure,imshow(f_r);
 figure,imshow(f_t);
 
+%M = 10
+%N = 40
 
 %  this command will determine the number of block in X and Y axis for each
 %  search window 
@@ -29,8 +31,9 @@ mvx_Blocks = zeros(num_blk_x,num_blk_y);
 mvy_Blocks = zeros(num_blk_x,num_blk_y);
 
 
-for i = 1:N:Height-N;
-     for    j = 1:N:Width-N;
+% loop through image pixels ignoring 40 pixel outside
+for i = 1:N:Height-N; % 1 : 40 : Image Height - 40
+     for    j = 1:N:Width-N; % 1 : 40 : Image Width - 40
      
         % MAD_Matrix, mvx, and mvy are a quadrangle with 21 * 21 height and
         % width which are include only zeros values for a search window
@@ -40,12 +43,13 @@ for i = 1:N:Height-N;
         mvx = zeros(2*M+1);
         mvy = zeros(2*M+1);
         %height and width of current search location show with K and L
+        % loop through current block/ search window
         for k = -M:1:M
             for l = -M:1:M
                 %MAD=sum(sum(abs(f_r(i:i+N,j:j+N+1)-f_t(i+k:i+k+N-1,j+l:j+l+N-1))));
-                MAD = 0;
+                MAD = 0; % reset the MAD value
                 %u and v are displacement for the height and width
-                for u = 0:N-1
+                for u = 0:N-1 % ???
                     for v = 0:N-1
                         if ((u+k > 0)&&(u+k < Height + 1)&&(v+l > 0)&&(v+l < Width + 1))
                             %a is reference image with consider u and v displacement
@@ -93,7 +97,7 @@ for i = 1:N:Height-N;
        
         %             figure, imshow(f_t);
         %             hold on;
-         arrow([j i],[j+dy i+dx], 3,'Color','y');
+        % arrow([j i],[j+dy i+dx], 3,'Color','y');
      
     end
 end
