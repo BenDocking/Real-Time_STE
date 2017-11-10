@@ -135,9 +135,7 @@ void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames) {
 	}
 }
 
-void ReadSavedDataByUltrasonix() {
-
-	int indexp1;
+FILE* ReadFile() {
 	// direc = Documents/InOut/FILENAME
 	CHAR Direc[MAX_PATH];
 	HRESULT result = SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, Direc);
@@ -159,6 +157,10 @@ void ReadSavedDataByUltrasonix() {
 		exit(-1);
 	}
 
+	return fp;
+}
+
+uFileHeader ReadHeader(FILE *fp) {
 	// read header
 	uFileHeader hdr;
 	fread(&hdr, sizeof(hdr), 1, fp);
@@ -170,6 +172,11 @@ void ReadSavedDataByUltrasonix() {
 	printf("frames rate: %d\n", hdr.dr);
 	cout << endl;
 
+	return hdr;
+}
+
+Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
+	int indexp1;
 	int hdr_frames = hdr.frames;
 	int FrameRate = hdr.dr;
 	int size_Sonix = 0;
@@ -193,7 +200,6 @@ void ReadSavedDataByUltrasonix() {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
-
 			
 			// display image
 			ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
@@ -204,7 +210,7 @@ void ReadSavedDataByUltrasonix() {
 
 			cvFlip(ImageRaw, NULL, 1);
 			cvShowImage("Raw_Image",ImageRaw);
-			cv::waitKey(50); // wait for 1000 milliseconds
+			cv::waitKey(1); // wait for 1000 milliseconds
 			cvReleaseImage(&ImageRaw);
 		}
 		delete[] data;
@@ -223,52 +229,24 @@ void ReadSavedDataByUltrasonix() {
 		delete[] data2;
 		break;
 	}
-	
-	/*
-	// display image
-	ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
-	for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
-		indexp1 = pixelp * 3;
-		ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1 + 1] = ImageRaw->imageData[indexp1 + 2] = sr[130].Image[pixelp];
-	}
-
-	//cvFlip(ImageRaw, NULL, 1);
-	cvShowImage("Raw_Image", ImageRaw);
-	cv::waitKey(1000); // wait for 1000 milliseconds
-	cvReleaseImage(&ImageRaw);
-	*/
 
 	fclose(fp);
 	
-	//if (Read_Frame_Numbers) {
-	// Reading frame number
-	/*
-	Direc[strlen(Direc) - 6] = 'm';
-	Direc[strlen(Direc) - 8] = 'r';
-	Direc[strlen(Direc) - 9] = 'f';
 	cout << endl;
-	cout << "Reading frame number..." << endl;
-	cout << endl;
-	// open data file
-	fp = fopen(Direc, "rb");
-	if (!fp) {
-	cout << "Error opening input file" << endl;
-	system("pause");
-	exit(-1);
-	}
-	// read data
-	for (int fr = 0; fr < hdr.frames; fr++)
-	fread(&SR[fr].Frame_No, sizeof(int), 1, fp);
-	fclose(fp);
-	//}
-	*/
-	cout << endl;
-	cout << "Finished reading data from hard disk..." << endl;
+	cout << "Finished reading data from hard disk...\n" << endl;
+	return sr;
+}
+
+void BlockMatching() {
+
 }
 
 int main(int argc, char **argv) {
-	ReadSavedDataByUltrasonix();
+	FILE *fp = ReadFile();
+	uFileHeader hdr = ReadHeader(fp);
+	Speckle_Results *sr = ReadImageData(fp, hdr);
 	system("pause");
+	BlockMatching();
 	exit(-1);
 	return 0;
 }
