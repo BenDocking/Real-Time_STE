@@ -33,15 +33,15 @@ class uFileHeader
 {
 public:
 	/// data type - data types can also be determined by file extensions
-	int type; //.b8
+	int type;
 	/// number of frames in file
-	int frames; //length of file...frames
+	int frames;
 	/// width - number of vectors for raw data, image width for processed data
-	int w; //width
+	int w;
 	/// height - number of samples for raw data, image height for processed data
-	int h; //height
+	int h;
 	/// data sample size in bits
-	int ss; //size of data in bits
+	int ss;
 	/// roi - upper left (x)
 	int ulx;
 	/// roi - upper left (y)
@@ -72,6 +72,38 @@ public:
 	int extra;
 };
 
+void InitialiseSpeckleResults(Speckle_Results sr[], int lengthFrames, int size_Sonix);
+void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames);
+void DisplayImage(int fr, int width, int height, Speckle_Results *sr);
+FILE* ReadFile();
+uFileHeader ReadHeader(FILE *fp);
+Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
+Mat convertMat(int hdr_width, int hdr_height, Speckle_Results *sr);
+void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
+
+int main(int argc, char **argv) {
+	FILE *fp = ReadFile();
+	uFileHeader hdr = ReadHeader(fp);
+	Speckle_Results *sr = ReadImageData(fp, hdr);
+	Mat ImageRaw = convertMat(hdr.w, hdr.h, sr);
+
+	for (int x = 0; x < hdr.h; x++) {
+		for (int y = 0; y < hdr.w; y++) {
+			int iout = (int)ImageRaw.at<uchar>(x, y);
+
+			if (iout == 255) {
+				cout << x << ", " << y << endl;
+			}
+		}
+	}
+
+	//DisplayImage(0, hdr.w, hdr.h, sr);
+	//BlockMatching(hdr, sr);
+
+	system("pause");
+	exit(-1);
+	return 0;
+}
 
 void InitialiseSpeckleResults(Speckle_Results sr[], int lengthFrames, int size_Sonix) {
 	for (int i = 0; i < lengthFrames; i++)
@@ -85,6 +117,16 @@ void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames) {
 	{
 		delete[] sr[i].Image;
 	}
+}
+
+void DisplayImage(int fr, int width, int height, Speckle_Results *sr) {
+	Mat ImageRaw = Mat(cvSize(width, height), CV_8UC1);
+	for (int pixelp = 0; pixelp < width * height; pixelp++) {
+		ImageRaw.data[pixelp] = sr[fr].Image[pixelp];
+	}
+	namedWindow("Raw_Image", WINDOW_AUTOSIZE);
+	imshow("Raw_Image", ImageRaw);
+	waitKey(1);
 }
 
 FILE* ReadFile() {
@@ -128,7 +170,6 @@ uFileHeader ReadHeader(FILE *fp) {
 }
 
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
-	int indexp1;
 	int hdr_frames = hdr.frames;
 	int FrameRate = hdr.dr;
 	int size_Sonix = 0;
@@ -152,19 +193,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
-
-			// display image
-			//ImageRaw = cvCreateImage(cvSize(hdr.w, hdr.h), IPL_DEPTH_8U, 3);
-			ImageRaw = Mat(cvSize(hdr.w, hdr.h), CV_8UC3);
-			for (int pixelp = 0; pixelp < hdr.w * hdr.h; pixelp++) {
-				indexp1 = pixelp * 3;
-			//ImageRaw->data[indexp1] = ImageRaw->data[indexp1+1] = ImageRaw->data[indexp1+2] = sr[fr].Image[pixelp];
-				ImageRaw = sr[fr].Image[pixelp];
-			}
-			//cvFlip(ImageRaw, NULL, 1);
-			imshow("Raw_Image",ImageRaw);
-			cv::waitKey(1); // wait for 0.1 milliseconds
-			//cvReleaseImage(&ImageRaw);
+			DisplayImage(fr, hdr.w, hdr.h, sr); //display image frame
 		}
 		delete[] data;
 		break;
@@ -188,6 +217,15 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 	cout << endl;
 	cout << "Finished reading data from hard disk...\n" << endl;
 	return sr;
+}
+
+Mat convertMat(int hdr_width, int hdr_height, Speckle_Results *sr) {
+	//convert *sr to Mat
+	Mat ImageRaw = Mat(cvSize(hdr_width, hdr_height), CV_8UC1);
+	for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
+		ImageRaw.data[pixelp] = sr[0].Image[pixelp];
+	}
+	return ImageRaw;
 }
 
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
@@ -217,12 +255,11 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 							for (int v = 0; v < N; v++) {
 								if ((u + x > 0) && (u + x < hdr_height + 1) && (v + y > 0) && (v + y < hdr_width + 1)) {
 									//backward prediction
-									//ImageRaw = cvCreateImage(cvSize(hdr_width, hdr_height), IPL_DEPTH_8U, 3);
-									//for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
-									//	indexp1 = pixelp * 3;
-									//	ImageRaw->imageData[indexp1] = ImageRaw->imageData[indexp1 + 1] = ImageRaw->imageData[indexp1 + 2] = sr[fr].Image[pixelp];
-									//}
-									//cvReleaseImage(&ImageRaw);
+									for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
+										indexp1 = pixelp * 3;
+										int test = sr[fr].Image[pixelp];
+										printf("Test: %d\n", test);
+									}
 								}
 							}
 						}
@@ -231,14 +268,4 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 			}
 		}
 	}
-}
-
-int main(int argc, char **argv) {
-	FILE *fp = ReadFile();
-	uFileHeader hdr = ReadHeader(fp);
-	Speckle_Results *sr = ReadImageData(fp, hdr);
-	system("pause");
-	//BlockMatching(hdr, sr);
-	exit(-1);
-	return 0;
 }
