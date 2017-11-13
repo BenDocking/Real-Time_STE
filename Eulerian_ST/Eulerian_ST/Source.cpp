@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <vector>
+#include <math.h>
 #include <opencv2/opencv.hpp>
 
 #ifdef __APPLE__
@@ -78,27 +79,29 @@ void DisplayImage(int fr, int width, int height, Speckle_Results *sr);
 FILE* ReadFile();
 uFileHeader ReadHeader(FILE *fp);
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
-Mat convertMat(int hdr_width, int hdr_height, Speckle_Results *sr);
+Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
 
 int main(int argc, char **argv) {
 	FILE *fp = ReadFile();
 	uFileHeader hdr = ReadHeader(fp);
 	Speckle_Results *sr = ReadImageData(fp, hdr);
-	Mat ImageRaw = convertMat(hdr.w, hdr.h, sr);
 
+	//DisplayImage(0, hdr.w, hdr.h, sr);
+	/*
+	Mat ImageRaw = convertMat(hdr.w, hdr.h, 0, sr);
 	for (int x = 0; x < hdr.h; x++) {
 		for (int y = 0; y < hdr.w; y++) {
-			int iout = (int)ImageRaw.at<uchar>(x, y);
+			double iout = (double)ImageRaw.at<uchar>(x, y);
 
 			if (iout == 255) {
 				cout << x << ", " << y << endl;
 			}
 		}
 	}
+	*/
 
-	//DisplayImage(0, hdr.w, hdr.h, sr);
-	//BlockMatching(hdr, sr);
+	BlockMatching(hdr, sr);
 
 	system("pause");
 	exit(-1);
@@ -219,11 +222,11 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 	return sr;
 }
 
-Mat convertMat(int hdr_width, int hdr_height, Speckle_Results *sr) {
+Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 	//convert *sr to Mat
 	Mat ImageRaw = Mat(cvSize(hdr_width, hdr_height), CV_8UC1);
 	for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
-		ImageRaw.data[pixelp] = sr[0].Image[pixelp];
+		ImageRaw.data[pixelp] = sr[fr].Image[pixelp];
 	}
 	return ImageRaw;
 }
@@ -231,40 +234,54 @@ Mat convertMat(int hdr_width, int hdr_height, Speckle_Results *sr) {
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 40; //block size
 	int M = 10; //search window
-	int indexp1;
-	int * MAD_Matrix = new int[2 * M + 1];
-	int * mvx = new int[2 * M + 1];
-	int * mvy = new int[2 * M + 1];
+	double * MAD_Matrix = new double[2 * M + 1];
+	double * mvx = new double[2 * M + 1];
+	double * mvy = new double[2 * M + 1];
 	int hdr_height = hdr.h;
 	int hdr_width = hdr.w;
-	int MAD; //mean of differences between reference and target image
+	double MAD; //mean of differences between reference and target image
 	double A; //reference image
 	double B; //target image
+	double MAD_Min;
+	Mat TargetFrame;
+	Mat ReferenceFrame;
 
 	//loop through frames
 	for (int fr = 0; fr < hdr.frames; fr++) {
+		ReferenceFrame = convertMat(hdr_width, hdr_height, fr, sr);
+		TargetFrame = convertMat(hdr_width, hdr_height, fr+1, sr);
 		//loop through image
 		for (int i = 0; i < hdr_height - N; i = i + N) {
 			for (int j = 0; j < hdr_width - N; i = i + N) {
 				//loop through search window
 				for (int x = -M; x <= M; x++) {
 					for (int y = -M; y <= M; y++) {
-						MAD = 0;
+						MAD = 0; //reset MAD
 						//u and v = displacement for height and width
 						for (int u = 0; u < N; u++) {
 							for (int v = 0; v < N; v++) {
 								if ((u + x > 0) && (u + x < hdr_height + 1) && (v + y > 0) && (v + y < hdr_width + 1)) {
 									//backward prediction
-									for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
-										indexp1 = pixelp * 3;
-										int test = sr[fr].Image[pixelp];
-										printf("Test: %d\n", test);
-									}
+									A = (double)ReferenceFrame.at<uchar>((i + u), (j + v));
+									B = (double)TargetFrame.at<uchar>((i + u + x), (j + v + y));
+									MAD += fabs(A - B);
 								}
 							}
 						}
+						MAD /= N * N;
+						MAD_Matrix[x + M + 1, y + M + 1] = MAD; //convert 2D to 1D HERE!!!
+						mvx[x + M + 1, y + M + 1] = x;
+						mvy[x + M + 1, y + M + 1] = y;
 					}
 				}
+				//get min value of MAD_Matrix
+				for (int m = 0; m < sizeof(MAD_Matrix); m++) {
+					double curr = MAD_Matrix[m];
+					if (curr < MAD_Min) {
+						MAD_Min = curr;
+					}
+				}
+
 			}
 		}
 	}
