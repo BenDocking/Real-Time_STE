@@ -245,6 +245,12 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	double MAD_Min;
 	Mat TargetFrame;
 	Mat ReferenceFrame;
+	int ctr = 0;
+	int index, iblk, jblk;
+	//output variables
+	int * MAD_Min_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
+	int * mvx_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
+	int * mvy_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
 
 	//loop through frames
 	for (int fr = 0; fr < hdr.frames; fr++) {
@@ -269,9 +275,10 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 							}
 						}
 						MAD /= N * N;
-						MAD_Matrix[x + M + 1, y + M + 1] = MAD; //convert 2D to 1D HERE!!!
-						mvx[x + M + 1, y + M + 1] = x;
-						mvy[x + M + 1, y + M + 1] = y;
+						MAD_Matrix[ctr] = MAD; //convert 2D to 1D HERE!!!
+						mvx[ctr] = x;
+						mvy[ctr] = y;
+						ctr++;
 					}
 				}
 				//get min value of MAD_Matrix
@@ -279,9 +286,13 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 					double curr = MAD_Matrix[m];
 					if (curr < MAD_Min) {
 						MAD_Min = curr;
+						index = m; //store index of minumim MAD
 					}
 				}
-
+				index -= 10; //between -10 and 10 ... index = 0 means no movement
+				iblk = ceil(i / N);
+				jblk = ceil(j / N);
+				//outputs
 			}
 		}
 	}
