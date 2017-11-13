@@ -242,23 +242,24 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	double MAD; //mean of differences between reference and target image
 	double A; //reference image
 	double B; //target image
-	double MAD_Min;
+	double MAD_Min  = 9999999999;
 	Mat TargetFrame;
 	Mat ReferenceFrame;
 	int ctr = 0;
-	int index, iblk, jblk;
+	int index, iblk, jblk, dy, dx;
 	//output variables
-	int * MAD_Min_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
-	int * mvx_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
-	int * mvy_Blocks = new int[(hdr_height / N) * (hdr_width / N)];
+	double * MAD_Min_Blocks = new double[((hdr_height + N - 1) / N) * ((hdr_width + N - 1) / N)];
+	int * mvx_Blocks = new int[((hdr_height + N - 1) / N) * ((hdr_width + N - 1) / N)];
+	int * mvy_Blocks = new int[((hdr_height + N - 1) / N) * ((hdr_width + N - 1) / N)];
 
 	//loop through frames
 	for (int fr = 0; fr < hdr.frames; fr++) {
 		ReferenceFrame = convertMat(hdr_width, hdr_height, fr, sr);
 		TargetFrame = convertMat(hdr_width, hdr_height, fr+1, sr);
 		//loop through image
-		for (int i = 0; i < hdr_height - N; i = i + N) {
-			for (int j = 0; j < hdr_width - N; i = i + N) {
+		for (int i = 0; i < hdr_height - N - 1; i = i + N) {
+			for (int j = 0; j < hdr_width - N - 1; i = i + N) {
+				ctr = 0;
 				//loop through search window
 				for (int x = -M; x <= M; x++) {
 					for (int y = -M; y <= M; y++) {
@@ -275,7 +276,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 							}
 						}
 						MAD /= N * N;
-						MAD_Matrix[ctr] = MAD; //convert 2D to 1D HERE!!!
+						MAD_Matrix[ctr] = MAD;
 						mvx[ctr] = x;
 						mvy[ctr] = y;
 						ctr++;
@@ -289,10 +290,16 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 						index = m; //store index of minumim MAD
 					}
 				}
-				index -= 10; //between -10 and 10 ... index = 0 means no movement
-				iblk = ceil(i / N);
-				jblk = ceil(j / N);
+				dx = index % ((hdr_width + N - 1) / N);
+				dy = index / ((hdr_width + N - 1) / N);
+				dx -= 10; //between -10 and 10
+				dx -= 10;
+				iblk = (i + N - 1) / N;
+				jblk = (j + N - 1) / N;
 				//outputs
+				mvx_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = dx;
+				mvy_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = dy;
+				MAD_Min_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = MAD_Min;
 			}
 		}
 	}
