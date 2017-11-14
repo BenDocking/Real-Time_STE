@@ -12,7 +12,7 @@
 #include <opencv2/opencv.hpp>
 
 #ifdef __APPLE__
-#include <OpenCL/cl.hpp>
+//include <OpenCL/cl.hpp>
 #else
 //#include <CL/cl.hpp>
 #endif
@@ -258,7 +258,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		TargetFrame = convertMat(hdr_width, hdr_height, fr+1, sr);
 		//loop through image
 		for (int i = 0; i < hdr_height - N - 1; i = i + N) {
-			for (int j = 0; j < hdr_width - N - 1; i = i + N) {
+			for (int j = 0; j < hdr_width - N - 1; j = j + N) {
 				ctr = 0;
 				//loop through search window
 				for (int x = -M; x <= M; x++) {
@@ -283,7 +283,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 					}
 				}
 				//get min value of MAD_Matrix
-				for (int m = 0; m < sizeof(MAD_Matrix); m++) {
+				for (int m = 0; m < ctr - 1; m++) {
 					double curr = MAD_Matrix[m];
 					if (curr < MAD_Min) {
 						MAD_Min = curr;
@@ -303,4 +303,10 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 			}
 		}
 	}
+	delete[] mvx_Blocks;
+	delete[] mvy_Blocks;
+	delete[] MAD_Min_Blocks;
+	delete[] MAD_Matrix;
+	delete[] mvx;
+	delete[] mvy;
 }
