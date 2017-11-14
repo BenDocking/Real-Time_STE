@@ -1,2 +1,5 @@
 ﻿  Source.cpp
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(252): warning C4244: 'initializing': conversion from 'double' to '::size_t', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(253): warning C4244: 'initializing': conversion from 'double' to '::size_t', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(254): warning C4244: 'initializing': conversion from 'double' to '::size_t', possible loss of data
   Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Debug\Eulerian_ST.exe
