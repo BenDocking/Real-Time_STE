@@ -199,7 +199,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
-			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
@@ -257,95 +257,12 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
 		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, M, hdr.w, hdr.h, blocksW, blocksH);
+		for (int i = 0; i < (blocksH * blocksW); i++){
+			line(referenceFrame, details[i], details[i-1], Scalar(255, 255, 0), 5, 8, 0);
+		}
 		imshow(window, referenceFrame);
 		waitKey(1);
 	}
-
-	/*
-	int N = 40; //block size
-	int M = 10; //search window
-	double * MAD_Matrix = new double[2 * M + 1];
-	int * mvx = new int[2 * M + 1];
-	int * mvy = new int[2 * M + 1];
-	int hdr_height = hdr.h;
-	int hdr_width = hdr.w;
-	double MAD; //mean of differences between reference and target image
-	int A; //reference image
-	int B; //target image
-	double MAD_Min  = 9999999999;
-	Mat TargetFrame;
-	Mat ReferenceFrame;
-	int ctr = 0;
-	int index, iblk, jblk, dy, dx;
-	double curr = 0;
-	//output variables
-	double * MAD_Min_Blocks = new double[ceil(hdr_height / N) *  ceil(hdr_width / N)];
-	int * mvx_Blocks = new int[ceil(hdr_height / N) *  ceil(hdr_width / N)];
-	int * mvy_Blocks = new int[ceil(hdr_height / N) *  ceil(hdr_width / N)];
-	string window("BM");
-	namedWindow("window", WINDOW_FREERATIO);
-
-	//loop through frames
-	for (int fr = 0; fr < hdr.frames - 2; fr++) {
-		ReferenceFrame = convertMat(hdr_width, hdr_height, fr, sr);
-		TargetFrame = convertMat(hdr_width, hdr_height, fr+1, sr);
-		imshow(window, ReferenceFrame);
-		waitKey(1);
-
-		//loop through image
-		for (int i = 0; i < hdr_height - N - 1; i = i + N) {
-			for (int j = 0; j < hdr_width - N - 1; j = j + N) {
-				ctr = 0;
-				//loop through search window
-				for (int x = -M; x <= M; x++) {
-					for (int y = -M; y <= M; y++) {
-						MAD = 0; //reset MAD
-						//u and v = displacement for height and width
-						for (int u = 0; u < N; u++) {
-							for (int v = 0; v < N; v++) {
-								if ((u + x > 0) && (u + x < hdr_height + 1) && (v + y > 0) && (v + y < hdr_width + 1)) {
-									//backward prediction
-									A = (int)ReferenceFrame.at<uchar>((i + u), (j + v));
-									B = (int)TargetFrame.at<uchar>((i + u + x), (j + v + y));
-									MAD += fabs(A - B);
-								}
-							}
-						}
-						MAD /= N * N;
-						MAD_Matrix[ctr] = MAD;
-						mvx[ctr] = x;
-						mvy[ctr] = y;
-						ctr++;
-					}
-				}
-				//get min value of MAD_Matrix
-				for (int m = 0; m < ctr - 1; m++) {
-					curr = MAD_Matrix[m];
-					if (curr < MAD_Min) {
-						MAD_Min = curr;
-						index = m; //store index of minumim MAD
-					}
-				}
-				dx = index % ((hdr_width + N - 1) / N);
-				dy = index / ((hdr_width + N - 1) / N);
-				dx -= M; //between -10 and 10
-				dx -= M;
-				iblk = (i + N - 1) / N;
-				jblk = (j + N - 1) / N;
-				//outputs
-				mvx_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = dx;
-				mvy_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = dy;
-				MAD_Min_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = MAD_Min;
-			}
-		}
-	}
-	delete[] MAD_Matrix;
-	delete[] mvx;
-	delete[] mvy;
-	delete[] mvx_Blocks;
-	delete[] mvy_Blocks;
-	delete[] MAD_Min_Blocks;
-	*/
 }
 
 Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N, const int width, const int height) {
