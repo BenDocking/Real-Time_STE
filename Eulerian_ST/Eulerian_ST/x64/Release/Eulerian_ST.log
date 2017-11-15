@@ -1,5 +1,12 @@
 ﻿  Source.cpp
+Source.cpp(241): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(242): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(357): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(362): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(387): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(396): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
+Source.cpp(397): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   Generating code
-  All 230 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  All 301 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe

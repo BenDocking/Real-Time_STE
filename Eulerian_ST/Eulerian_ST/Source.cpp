@@ -82,6 +82,7 @@ uFileHeader ReadHeader(FILE *fp);
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
 Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
+Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N, const int width, const int height);
 void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH);
 
 int main(int argc, char **argv) {
@@ -247,8 +248,8 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	//Create Real-Time graph to display average angular motion
 	//SimpleGraph motion_graph(1024, 512, 128);
 
-	string window("BM");
-	namedWindow("window", WINDOW_FREERATIO);
+	string window = "BM";
+	namedWindow(window, WINDOW_AUTOSIZE);
 
 	//loop through frames
 	for (int fr = 1; fr < hdr.frames - 1; fr++) {
@@ -347,6 +348,20 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	*/
 }
 
+Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N, const int width, const int height) {
+	for (int r = -N; r < N; r += N) {
+		for (int c = -N; c < N; c += N) {
+			Point referencePoint(currentPoint.x + r, currentPoint.y + c);
+			//if search area within bounds
+			if (referencePoint.y >= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
+				return Vec3i(r, c, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
+			}
+		}
+	}
+	Point referencePoint(currentPoint.x, currentPoint.y);
+	return Vec3i(0, 0, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
+}
+
 void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int M, int width, int height, int blocksW, int blocksH) {
 	//for all blocks in frame
 	for (int x = 0; x < blocksW; x++) {
@@ -354,33 +369,15 @@ void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, P
 			//current frame reference to be searched for in previous frame
 			const Point currentPoint(x * M, y * M);
 			int idx = x + y * blocksW;
-			int closestRow;
-			int closestCol;
-			bool check = false;
-
-			for (int r = -N; r < N; r += N) {
-				for (int c = -N; c < N; c += N) {
-					Point referencePoint(currentPoint.x + r, currentPoint.y + c);
-					//if search area within bounds
-					if (referencePoint.y <= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
-						closestRow = r;
-						closestCol = c;
-						check = true;
-					}
-				}
-			}
-			if (check == false) {
-				closestCol = 0;
-				closestRow = 0;
-			}
+			Vec3i closestPoint = Closest(referenceFrame, currentPoint, N, width, height);
 			int lowestSSD = INT_MAX;
 			int SSD = 0;
 			float blockDistance = FLT_MAX;
 			Point referencePoint(currentPoint.x, currentPoint.y);
 
 			//Loop over all possible blocks within each macroblock
-			for (int row = closestRow; row < N; row++) {
-				for (int col = closestCol; col < N; col++) {
+			for (int row = closestPoint[0]; row < N; row++) {
+				for (int col = closestPoint[1]; col < N; col++) {
 					//Refererence a block to search on the previous frame
 					Point referencePoint(currentPoint.x + row, currentPoint.y + col);
 
