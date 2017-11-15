@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <vector>
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <opencv2/opencv.hpp>
 
@@ -81,6 +82,7 @@ uFileHeader ReadHeader(FILE *fp);
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
 Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
+void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH);
 
 int main(int argc, char **argv) {
 	FILE *fp = ReadFile();
@@ -102,7 +104,7 @@ int main(int argc, char **argv) {
 	*/
 
 	BlockMatching(hdr, sr);
-
+	destroyAllWindows();
 	system("pause");
 	exit(-1);
 	return 0;
@@ -196,7 +198,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
-			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
@@ -234,6 +236,33 @@ Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 40; //block size
 	int M = 10; //search window
+
+	int blocksH = ceil(hdr.h / N);
+	int blocksW = ceil(hdr.w / N);
+	Mat currentFrame;
+	Mat referenceFrame;
+	//point array for storing motion
+	Point * motion = new Point[blocksH * blocksW];
+	Point2f * details = new Point2f[blocksH * blocksW];
+	//Create Real-Time graph to display average angular motion
+	//SimpleGraph motion_graph(1024, 512, 128);
+
+	string window("BM");
+	namedWindow("window", WINDOW_FREERATIO);
+
+	//loop through frames
+	for (int fr = 1; fr < hdr.frames - 1; fr++) {
+		//forwards prediction
+		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
+		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
+		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, M, hdr.w, hdr.h, blocksW, blocksH);
+		imshow(window, referenceFrame);
+		waitKey(1);
+	}
+
+	/*
+	int N = 40; //block size
+	int M = 10; //search window
 	double * MAD_Matrix = new double[2 * M + 1];
 	int * mvx = new int[2 * M + 1];
 	int * mvy = new int[2 * M + 1];
@@ -252,17 +281,15 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	double * MAD_Min_Blocks = new double[ceil(hdr_height / N) *  ceil(hdr_width / N)];
 	int * mvx_Blocks = new int[ceil(hdr_height / N) *  ceil(hdr_width / N)];
 	int * mvy_Blocks = new int[ceil(hdr_height / N) *  ceil(hdr_width / N)];
+	string window("BM");
+	namedWindow("window", WINDOW_FREERATIO);
 
 	//loop through frames
 	for (int fr = 0; fr < hdr.frames - 2; fr++) {
 		ReferenceFrame = convertMat(hdr_width, hdr_height, fr, sr);
 		TargetFrame = convertMat(hdr_width, hdr_height, fr+1, sr);
-
-		/*
-		namedWindow("Frame", WINDOW_AUTOSIZE);
-		imshow("Frame", ReferenceFrame);
+		imshow(window, ReferenceFrame);
 		waitKey(1);
-		*/
 
 		//loop through image
 		for (int i = 0; i < hdr_height - N - 1; i = i + N) {
@@ -300,8 +327,8 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				}
 				dx = index % ((hdr_width + N - 1) / N);
 				dy = index / ((hdr_width + N - 1) / N);
-				dx -= 10; //between -10 and 10
-				dx -= 10;
+				dx -= M; //between -10 and 10
+				dx -= M;
 				iblk = (i + N - 1) / N;
 				jblk = (j + N - 1) / N;
 				//outputs
@@ -310,11 +337,6 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				MAD_Min_Blocks[iblk * ((hdr_width + N - 1) / N) + jblk] = MAD_Min;
 			}
 		}
-		/*
-		namedWindow("Frame", WINDOW_AUTOSIZE);
-		imshow("Frame", TargetFrame);
-		waitKey(1);
-		*/
 	}
 	delete[] MAD_Matrix;
 	delete[] mvx;
@@ -322,4 +344,66 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	delete[] mvx_Blocks;
 	delete[] mvy_Blocks;
 	delete[] MAD_Min_Blocks;
+	*/
+}
+
+void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int M, int width, int height, int blocksW, int blocksH) {
+	//for all blocks in frame
+	for (int x = 0; x < blocksW; x++) {
+		for (int y = 0; y < blocksH; y++) {
+			//current frame reference to be searched for in previous frame
+			const Point currentPoint(x * M, y * M);
+			int idx = x + y * blocksW;
+			int closestRow;
+			int closestCol;
+			bool check = false;
+
+			for (int r = -N; r < N; r += N) {
+				for (int c = -N; c < N; c += N) {
+					Point referencePoint(currentPoint.x + r, currentPoint.y + c);
+					//if search area within bounds
+					if (referencePoint.y <= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
+						closestRow = r;
+						closestCol = c;
+						check = true;
+					}
+				}
+			}
+			if (check == false) {
+				closestCol = 0;
+				closestRow = 0;
+			}
+			int lowestSSD = INT_MAX;
+			int SSD = 0;
+			float blockDistance = FLT_MAX;
+			Point referencePoint(currentPoint.x, currentPoint.y);
+
+			//Loop over all possible blocks within each macroblock
+			for (int row = closestRow; row < N; row++) {
+				for (int col = closestCol; col < N; col++) {
+					//Refererence a block to search on the previous frame
+					Point referencePoint(currentPoint.x + row, currentPoint.y + col);
+
+					//Check if it lays within the bounds of the capture
+					if (referencePoint.y >= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
+						//Calculate SSD
+						SSD = sum(abs(currentFrame(Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0];
+
+						//Take the lowest error
+						float distance = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
+
+						//Write buffer with the lowest error
+						if (SSD < lowestSSD || (SSD == lowestSSD && distance <= blockDistance)) {
+							lowestSSD = SSD;
+							blockDistance = distance;
+							float p0x = currentPoint.x, p0y = currentPoint.y - sqrt((float)(((referencePoint.x - p0x) * (referencePoint.x - p0x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
+							float angle = (2 * atan2(referencePoint.y - p0y, referencePoint.x - p0x)) * 180 / M_PI;
+							motion[idx] = referencePoint;
+							details[idx] = Point2f(angle, blockDistance);
+						}
+					}
+				}
+			}
+		}
+	}
 }
