@@ -236,8 +236,7 @@ Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 40; //block size
-	int M = 10; //search window
-
+	int M = 20; //step size
 	int blocksH = ceil(hdr.h / N);
 	int blocksW = ceil(hdr.w / N);
 	Mat currentFrame;
@@ -245,8 +244,6 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	//point array for storing motion
 	Point * motion = new Point[blocksH * blocksW];
 	Point2f * details = new Point2f[blocksH * blocksW];
-	//Create Real-Time graph to display average angular motion
-	//SimpleGraph motion_graph(1024, 512, 128);
 
 	string window = "BM";
 	namedWindow(window, WINDOW_AUTOSIZE);
@@ -257,10 +254,32 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
 		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, M, hdr.w, hdr.h, blocksW, blocksH);
-		for (int i = 0; i < (blocksH * blocksW); i++){
-			line(referenceFrame, details[i], details[i-1], Scalar(255, 255, 0), 5, 8, 0);
+		Mat display = currentFrame.clone();
+
+		bool drawGrid = true;
+		Scalar rectColour = Scalar(255);
+		Scalar lineColour = Scalar(0, 105, 255);
+
+		for (size_t i = 0; i < blocksW; i++)
+		{
+			for (size_t j = 0; j < blocksH; j++)
+			{
+				//Calculate repective position of motion vector
+				int idx = i + j * blocksW;
+
+				//Offset drawn point to represent middle rather than top left of block
+				Point offset(N / 2, N / 2);
+				Point pos(i * M, j * M);
+				Point mVec(motion[idx].x, motion[idx].y);
+
+				if (drawGrid)
+					rectangle(display, pos, pos + cv::Point(N, N), rectColour);
+
+				arrowedLine(display, pos + offset, mVec + offset, lineColour);
+			}
 		}
-		imshow(window, referenceFrame);
+
+		imshow(window, display);
 		waitKey(1);
 	}
 }
