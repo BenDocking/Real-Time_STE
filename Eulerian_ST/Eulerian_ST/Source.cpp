@@ -236,7 +236,7 @@ Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 40; //block size
-	int M = 20; //step size
+	int stepSize = 40; //step size
 	int blocksH = ceil(hdr.h / N);
 	int blocksW = ceil(hdr.w / N);
 	Mat currentFrame;
@@ -253,12 +253,12 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		//forwards prediction
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
-		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, M, hdr.w, hdr.h, blocksW, blocksH);
+		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, stepSize, hdr.w, hdr.h, blocksW, blocksH);
 		Mat display = currentFrame.clone();
 
-		bool drawGrid = true;
+		bool drawGrid = false;
 		Scalar rectColour = Scalar(255);
-		Scalar lineColour = Scalar(0, 105, 255);
+		Scalar lineColour = Scalar(255, 255, 255);
 
 		for (size_t i = 0; i < blocksW; i++)
 		{
@@ -269,7 +269,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 
 				//Offset drawn point to represent middle rather than top left of block
 				Point offset(N / 2, N / 2);
-				Point pos(i * M, j * M);
+				Point pos(i * stepSize, j * stepSize);
 				Point mVec(motion[idx].x, motion[idx].y);
 
 				if (drawGrid)
@@ -284,12 +284,12 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	}
 }
 
-Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N, const int width, const int height) {
-	for (int r = -N; r < N; r += N) {
-		for (int c = -N; c < N; c += N) {
+Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int searchWindow, const int width, const int height, const int N) {
+	for (int r = -searchWindow; r < searchWindow; r += searchWindow) {
+		for (int c = -searchWindow; c < searchWindow; c += searchWindow) {
 			Point referencePoint(currentPoint.x + r, currentPoint.y + c);
 			//if search area within bounds
-			if (referencePoint.y >= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
+			if (referencePoint.y >= 0 && referencePoint.y < height - searchWindow && referencePoint.x >= 0 && referencePoint.x < width - searchWindow) {
 				return Vec3i(r, c, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
 			}
 		}
@@ -298,14 +298,15 @@ Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N,
 	return Vec3i(0, 0, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
 }
 
-void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int M, int width, int height, int blocksW, int blocksH) {
+void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH) {
 	//for all blocks in frame
 	for (int x = 0; x < blocksW; x++) {
 		for (int y = 0; y < blocksH; y++) {
 			//current frame reference to be searched for in previous frame
-			const Point currentPoint(x * M, y * M);
+			const Point currentPoint(x * stepSize, y * stepSize);
 			int idx = x + y * blocksW;
-			Vec3i closestPoint = Closest(referenceFrame, currentPoint, N, width, height);
+			int M = 10;
+			Vec3i closestPoint = Closest(referenceFrame, currentPoint, M, width, height, N);
 			int lowestSSD = INT_MAX;
 			int SSD = 0;
 			float blockDistance = FLT_MAX;
