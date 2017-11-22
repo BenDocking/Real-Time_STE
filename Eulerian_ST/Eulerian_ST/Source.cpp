@@ -252,9 +252,9 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		cv::Scalar rectColour = cv::Scalar(255);
 		cv::Scalar lineColour = cv::Scalar(0, 255, 255);
 
-		for (std::size_t i = 0; i < blocksW; i++)
+		for (std::size_t i = 0; i < blocksW-1; i++)
 		{
-			for (std::size_t j = 0; j < blocksH; j++)
+			for (std::size_t j = 0; j < blocksH-1; j++)
 			{
 				//Calculate repective position of motion vector
 				int idx = i + j * blocksW;
@@ -267,7 +267,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				if (drawGrid) {
 					rectangle(display, pos, pos + cv::Point(N, N), rectColour);
 				}
-
+				//only display motion vectors with motion
 				if (details[idx].y != 0 || details[idx].y != 0) {
 					arrowedLine(display, pos + offset, mVec + offset, lineColour);
 				}
