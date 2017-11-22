@@ -1,11 +1,11 @@
 ﻿  Source.cpp
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(240): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(241): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(268): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(272): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(293): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(298): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(324): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(333): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
-c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(334): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(231): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(232): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(260): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(264): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(287): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(292): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(321): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(330): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
+c:\users\computing\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(331): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   Eulerian_ST.vcxproj -> C:\Users\Computing\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Debug\Eulerian_ST.exe

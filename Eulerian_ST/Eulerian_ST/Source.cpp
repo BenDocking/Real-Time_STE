@@ -1,6 +1,7 @@
-//#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-//#define __CL_ENABLE_EXCEPTIONS
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define __CL_ENABLE_EXCEPTIONS
 #define _CRT_SECURE_NO_WARNINGS
+#define _USE_MATH_DEFINES
 
 #include <windows.h>
 #include <shlobj.h>
@@ -8,21 +9,11 @@
 #include <stdio.h>
 #include <fstream>
 #include <vector>
-#define _USE_MATH_DEFINES
 #include <math.h>
 #include <opencv2/opencv.hpp>
-
-#ifdef __APPLE__
-//include <OpenCL/cl.hpp>
-#else
-//#include <CL/cl.hpp>
-#endif
+#include <CL/cl.hpp>
 
 //#include "Utils.h"
-
-using namespace std;
-using namespace cv;
-//using namespace cl;
 
 class Speckle_Results 
 {
@@ -76,14 +67,14 @@ public:
 
 void InitialiseSpeckleResults(Speckle_Results sr[], int lengthFrames, int size_Sonix);
 void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames);
-void DisplayImage(int fr, int width, int height, Speckle_Results *sr, string Title);
+void DisplayImage(int fr, int width, int height, Speckle_Results *sr, std::string Title);
 FILE* ReadFile();
 uFileHeader ReadHeader(FILE *fp);
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
-Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
+cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
-Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int N, const int width, const int height);
-void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH);
+cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N);
+void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH);
 
 int main(int argc, char **argv) {
 	FILE *fp = ReadFile();
@@ -105,7 +96,7 @@ int main(int argc, char **argv) {
 	*/
 
 	BlockMatching(hdr, sr);
-	destroyAllWindows();
+	cv::destroyAllWindows();
 	system("pause");
 	exit(-1);
 	return 0;
@@ -125,14 +116,14 @@ void DeleteSpeckleResults(Speckle_Results sr[], int lengthFrames) {
 	}
 }
 
-void DisplayImage(int fr, int width, int height, Speckle_Results *sr, string Title) {
-	Mat ImageRaw = Mat(cvSize(width, height), CV_8UC1);
+void DisplayImage(int fr, int width, int height, Speckle_Results *sr, std::string Title) {
+	cv::Mat ImageRaw = cv::Mat(cvSize(width, height), CV_8UC1);
 	for (int pixelp = 0; pixelp < width * height; pixelp++) {
 		ImageRaw.data[pixelp] = sr[fr].Image[pixelp];
 	}
-	namedWindow(Title, WINDOW_AUTOSIZE);
+	cv::namedWindow(Title, cv::WINDOW_AUTOSIZE);
 	imshow(Title, ImageRaw);
-	waitKey(1);
+	cv::waitKey(1);
 }
 
 FILE* ReadFile() {
@@ -140,19 +131,19 @@ FILE* ReadFile() {
 	CHAR Direc[MAX_PATH];
 	HRESULT result = SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, Direc);
 	char Name[30];
-	cout << endl;
-	cout << "Enter file name: ";
-	cin >> Name;
+	std::cout << std::endl;
+	std::cout << "Enter file name: ";
+	std::cin >> Name;
 	strcat(Direc, "/InOut/");
 	strcat(Direc, Name);
-	cout << endl;
-	cout << "Reading data from hard disk..." << endl;
-	cout << endl;
+	std::cout << std::endl;
+	std::cout << "Reading data from hard disk..." << std::endl;
+	std::cout << std::endl;
 	// open data file
 	FILE * fp = fopen(Direc, "rb");
 	if (!fp) {
 		printf("Error opening input file from %s\n", Direc);
-		cout << endl;
+		std::cout << std::endl;
 		system("pause");
 		exit(-1);
 	}
@@ -170,7 +161,7 @@ uFileHeader ReadHeader(FILE *fp) {
 	printf("image (data) sample size: %d\n", hdr.ss);
 	printf("frames in file: %d\n", hdr.frames);
 	printf("frames rate: %d\n", hdr.dr);
-	cout << endl;
+	std::cout << std::endl;
 
 	return hdr;
 }
@@ -179,7 +170,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 	int hdr_frames = hdr.frames;
 	int FrameRate = hdr.dr;
 	int size_Sonix = 0;
-	Mat ImageRaw;
+	cv::Mat ImageRaw;
 	Speckle_Results * sr = new Speckle_Results[hdr_frames];
 
 	// print file information
@@ -199,7 +190,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
-			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
@@ -220,14 +211,14 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 
 	fclose(fp);
 	
-	cout << endl;
-	cout << "Finished reading data from hard disk...\n" << endl;
+	std::cout << std::endl;
+	std::cout << "Finished reading data from hard disk...\n" << std::endl;
 	return sr;
 }
 
-Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
+cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 	//convert *sr to Mat
-	Mat ImageRaw = Mat(cvSize(hdr_width, hdr_height), CV_8UC1);
+	cv::Mat ImageRaw = cv::Mat(cvSize(hdr_width, hdr_height), CV_8UC1);
 	for (int pixelp = 0; pixelp < hdr_width * hdr_height; pixelp++) {
 		ImageRaw.data[pixelp] = sr[fr].Image[pixelp];
 	}
@@ -235,18 +226,18 @@ Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 }
 
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
-	int N = 40; //block size
-	int stepSize = 40; //step size
+	int N = 10; //block size
+	int stepSize = 10; //step size of blocks
 	int blocksH = ceil(hdr.h / N);
 	int blocksW = ceil(hdr.w / N);
-	Mat currentFrame;
-	Mat referenceFrame;
-	//point array for storing motion
-	Point * motion = new Point[blocksH * blocksW];
-	Point2f * details = new Point2f[blocksH * blocksW];
+	cv::Mat currentFrame;
+	cv::Mat referenceFrame;
+	//point array for outputs
+	cv::Point * motion = new cv::Point[blocksH * blocksW];
+	cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
 
-	string window = "BM";
-	namedWindow(window, WINDOW_AUTOSIZE);
+	std::string window = "BM";
+	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
 
 	//loop through frames
 	for (int fr = 1; fr < hdr.frames - 1; fr++) {
@@ -254,76 +245,82 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
 		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, stepSize, hdr.w, hdr.h, blocksW, blocksH);
-		Mat display = currentFrame.clone();
+		cv::Mat display;
+		cvtColor(currentFrame, display, CV_GRAY2RGB);
 
 		bool drawGrid = false;
-		Scalar rectColour = Scalar(255);
-		Scalar lineColour = Scalar(255, 255, 255);
+		cv::Scalar rectColour = cv::Scalar(255);
+		cv::Scalar lineColour = cv::Scalar(0, 255, 255);
 
-		for (size_t i = 0; i < blocksW; i++)
+		for (std::size_t i = 0; i < blocksW; i++)
 		{
-			for (size_t j = 0; j < blocksH; j++)
+			for (std::size_t j = 0; j < blocksH; j++)
 			{
 				//Calculate repective position of motion vector
 				int idx = i + j * blocksW;
 
 				//Offset drawn point to represent middle rather than top left of block
-				Point offset(N / 2, N / 2);
-				Point pos(i * stepSize, j * stepSize);
-				Point mVec(motion[idx].x, motion[idx].y);
+				cv::Point offset(N / 2, N / 2);
+				cv::Point pos(i * stepSize, j * stepSize);
+				cv::Point mVec(motion[idx].x, motion[idx].y);
 
-				if (drawGrid)
+				if (drawGrid) {
 					rectangle(display, pos, pos + cv::Point(N, N), rectColour);
+				}
 
-				arrowedLine(display, pos + offset, mVec + offset, lineColour);
+				if (details[idx].y != 0 || details[idx].y != 0) {
+					arrowedLine(display, pos + offset, mVec + offset, lineColour);
+				}
 			}
 		}
-
 		imshow(window, display);
-		waitKey(1);
+		cv::waitKey(1);
 	}
 }
 
-Vec3i Closest(const Mat& referenceFrame, const Point& currentPoint, const int searchWindow, const int width, const int height, const int N) {
+cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N) {
 	for (int r = -searchWindow; r < searchWindow; r += searchWindow) {
 		for (int c = -searchWindow; c < searchWindow; c += searchWindow) {
-			Point referencePoint(currentPoint.x + r, currentPoint.y + c);
+			cv::Point referencePoint(currentPoint.x + r, currentPoint.y + c);
 			//if search area within bounds
 			if (referencePoint.y >= 0 && referencePoint.y < height - searchWindow && referencePoint.x >= 0 && referencePoint.x < width - searchWindow) {
-				return Vec3i(r, c, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
+				return cv::Vec3i(r, c, cv::sum(abs(referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
 			}
 		}
 	}
-	Point referencePoint(currentPoint.x, currentPoint.y);
-	return Vec3i(0, 0, sum(abs(referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
+	cv::Point referencePoint(currentPoint.x, currentPoint.y);
+	return cv::Vec3i(0, 0, cv::sum(abs(referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
 }
 
-void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH) {
+void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH) {
 	//for all blocks in frame
 	for (int x = 0; x < blocksW; x++) {
 		for (int y = 0; y < blocksH; y++) {
+			//Scalar intensity = currentFrame.at<uchar>(y * stepSize, x * stepSize);
+			//int d = intensity.val[0];
+
 			//current frame reference to be searched for in previous frame
-			const Point currentPoint(x * stepSize, y * stepSize);
+			const cv::Point currentPoint(x * stepSize, y * stepSize);
 			int idx = x + y * blocksW;
-			int M = 10;
-			Vec3i closestPoint = Closest(referenceFrame, currentPoint, M, width, height, N);
+			//int M = 500;
+			//Vec3i closestPoint = Closest(referenceFrame, currentPoint, M, width, height, N);
 			int lowestSSD = INT_MAX;
 			int SSD = 0;
 			float blockDistance = FLT_MAX;
-			Point referencePoint(currentPoint.x, currentPoint.y);
+			cv::Point referencePoint(currentPoint.x, currentPoint.y);
 
-			//Loop over all possible blocks within each macroblock
-			for (int row = closestPoint[0]; row < N; row++) {
-				for (int col = closestPoint[1]; col < N; col++) {
+			//loop over all posible blocks within search window/ all macroblocks
+			for (int row = -N; row < N; row++) {
+				for (int col = -N; col < N; col++) {
 					//Refererence a block to search on the previous frame
-					Point referencePoint(currentPoint.x + row, currentPoint.y + col);
+					cv::Point referencePoint(currentPoint.x + row, currentPoint.y + col);
 
 					//Check if it lays within the bounds of the capture
 					if (referencePoint.y >= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
 						//Calculate SSD
-						SSD = sum(abs(currentFrame(Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(Rect(referencePoint.x, referencePoint.y, N, N))))[0];
+						SSD = cv::sum(abs(currentFrame(cv::Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0];
 
-						//Take the lowest error
+						//Take the closest lowest error
 						float distance = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
 
 						//Write buffer with the lowest error
@@ -333,7 +330,7 @@ void BlockMatchingSAD(Mat& currentFrame, Mat& referenceFrame, Point * &motion, P
 							float p0x = currentPoint.x, p0y = currentPoint.y - sqrt((float)(((referencePoint.x - p0x) * (referencePoint.x - p0x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
 							float angle = (2 * atan2(referencePoint.y - p0y, referencePoint.x - p0x)) * 180 / M_PI;
 							motion[idx] = referencePoint;
-							details[idx] = Point2f(angle, blockDistance);
+							details[idx] = cv::Point2f(angle, blockDistance);
 						}
 					}
 				}
