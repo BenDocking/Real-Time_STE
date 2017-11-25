@@ -239,6 +239,9 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	std::string window = "BM";
 	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
 
+	//cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
+	//checkErr(err, "Cannot create the command queue");
+
 	//loop through frames
 	for (int fr = 1; fr < hdr.frames - 1; fr++) {
 		//forwards prediction
@@ -256,6 +259,15 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		{
 			for (std::size_t j = 0; j < blocksH-1; j++)
 			{
+				cv::Scalar intensity = currentFrame.at<uchar>(j * stepSize, i * stepSize);
+				int iVal = intensity.val[0];
+				if (iVal < 90) {
+					lineColour = cv::Scalar(0, 255, 255);
+				}
+				else {
+					lineColour = cv::Scalar(0, 0, 255);
+				}
+
 				//Calculate repective position of motion vector
 				int idx = i + j * blocksW;
 
@@ -273,6 +285,9 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				}
 			}
 		}
+		char frameInfo[200];
+		sprintf(frameInfo, "Frame %d of %d", fr, hdr.frames);
+		cv::putText(display, frameInfo, cvPoint(30, 30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
 		imshow(window, display);
 		cv::waitKey(1);
 	}
@@ -296,9 +311,6 @@ void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point 
 	//for all blocks in frame
 	for (int x = 0; x < blocksW; x++) {
 		for (int y = 0; y < blocksH; y++) {
-			//Scalar intensity = currentFrame.at<uchar>(y * stepSize, x * stepSize);
-			//int d = intensity.val[0];
-
 			//current frame reference to be searched for in previous frame
 			const cv::Point currentPoint(x * stepSize, y * stepSize);
 			int idx = x + y * blocksW;
