@@ -74,7 +74,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
 cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
 cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N);
-void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH);
+void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure);
 
 int main(int argc, char **argv) {
 	FILE *fp = ReadFile();
@@ -94,7 +94,6 @@ int main(int argc, char **argv) {
 		}
 	}
 	*/
-
 	BlockMatching(hdr, sr);
 	cv::destroyAllWindows();
 	system("pause");
@@ -170,6 +169,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 	int hdr_frames = hdr.frames;
 	int FrameRate = hdr.dr;
 	int size_Sonix = 0;
+	bool lastFrame = false;
 	cv::Mat ImageRaw;
 	Speckle_Results * sr = new Speckle_Results[hdr_frames];
 
@@ -190,6 +190,9 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 		for (int fr = 0; fr < hdr.frames; fr++) {
 			fread(data, size_Sonix, 1, fp); // read from stream
 			memcpy(sr[fr].Image, data, size_Sonix); // copy current data memory to array
+			if (fr == hdr.frames - 1) {
+				lastFrame = true;
+			}
 			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
@@ -230,11 +233,15 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int stepSize = 10; //step size of blocks
 	int blocksH = ceil(hdr.h / N);
 	int blocksW = ceil(hdr.w / N);
+	int similarityMeasure; //0 = SAD .. 1 = SSD 
 	cv::Mat currentFrame;
 	cv::Mat referenceFrame;
 	//point array for outputs
 	cv::Point * motion = new cv::Point[blocksH * blocksW];
 	cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
+
+	std::cout << "Enter number corresponding to similarity measure:\n\n1. SAD\n2. SSD\n\n";
+	std::cin >> similarityMeasure;
 
 	std::string window = "BM";
 	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
@@ -247,7 +254,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 		//forwards prediction
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
-		BlockMatchingSAD(referenceFrame, currentFrame, motion, details, N, stepSize, hdr.w, hdr.h, blocksW, blocksH);
+		BlockMatchingFrame(referenceFrame, currentFrame, motion, details, N, stepSize, hdr.w, hdr.h, blocksW, blocksH, similarityMeasure);
 		cv::Mat display;
 		cvtColor(currentFrame, display, CV_GRAY2RGB);
 
@@ -267,21 +274,22 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				else {
 					lineColour = cv::Scalar(0, 0, 255);
 				}
+				if (iVal > 30) {
+					//Calculate repective position of motion vector
+					int idx = i + j * blocksW;
 
-				//Calculate repective position of motion vector
-				int idx = i + j * blocksW;
+					//Offset drawn point to represent middle rather than top left of block
+					cv::Point offset(N / 2, N / 2);
+					cv::Point pos(i * stepSize, j * stepSize);
+					cv::Point mVec(motion[idx].x, motion[idx].y);
 
-				//Offset drawn point to represent middle rather than top left of block
-				cv::Point offset(N / 2, N / 2);
-				cv::Point pos(i * stepSize, j * stepSize);
-				cv::Point mVec(motion[idx].x, motion[idx].y);
-
-				if (drawGrid) {
-					rectangle(display, pos, pos + cv::Point(N, N), rectColour);
-				}
-				//only display motion vectors with motion
-				if (details[idx].y != 0 || details[idx].y != 0) {
-					arrowedLine(display, pos + offset, mVec + offset, lineColour);
+					if (drawGrid) {
+						rectangle(display, pos, pos + cv::Point(N, N), rectColour);
+					}
+					//only display motion vectors with motion
+					if (details[idx].y != 0 || details[idx].y != 0) {
+						arrowedLine(display, pos + offset, mVec + offset, lineColour);
+					}
 				}
 			}
 		}
@@ -307,7 +315,7 @@ cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, 
 	return cv::Vec3i(0, 0, cv::sum(abs(referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0]);
 }
 
-void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH) {
+void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure) {
 	//for all blocks in frame
 	for (int x = 0; x < blocksW; x++) {
 		for (int y = 0; y < blocksH; y++) {
@@ -316,8 +324,8 @@ void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point 
 			int idx = x + y * blocksW;
 			//int M = 500;
 			//Vec3i closestPoint = Closest(referenceFrame, currentPoint, M, width, height, N);
-			int lowestSSD = INT_MAX;
-			int SSD = 0;
+			int lowestSimilarity = INT_MAX;
+			int similarity = 0;
 			float blockDistance = FLT_MAX;
 			cv::Point referencePoint(currentPoint.x, currentPoint.y);
 
@@ -329,15 +337,22 @@ void BlockMatchingSAD(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point 
 
 					//Check if it lays within the bounds of the capture
 					if (referencePoint.y >= 0 && referencePoint.y < height - N && referencePoint.x >= 0 && referencePoint.x < width - N) {
-						//Calculate SSD
-						SSD = cv::sum(abs(currentFrame(cv::Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0];
+						if (similarityMeasure == 0) {
+							//Calculate SAD
+							similarity = cv::sum(abs(currentFrame(cv::Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N))))[0];
+						}
+						else if (similarityMeasure == 1) {
+							//Calculate SSD
+							similarity = cv::sum(currentFrame(cv::Rect(currentPoint.x, currentPoint.y, N, N)) - referenceFrame(cv::Rect(referencePoint.x, referencePoint.y, N, N)))[0];
+							similarity *= similarity;
+						}
 
 						//Take the closest lowest error
 						float distance = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
 
 						//Write buffer with the lowest error
-						if (SSD < lowestSSD || (SSD == lowestSSD && distance <= blockDistance)) {
-							lowestSSD = SSD;
+						if (similarity < lowestSimilarity || (similarity == lowestSimilarity && distance <= blockDistance)) {
+							lowestSimilarity = similarity;
 							blockDistance = distance;
 							float p0x = currentPoint.x, p0y = currentPoint.y - sqrt((float)(((referencePoint.x - p0x) * (referencePoint.x - p0x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
 							float angle = (2 * atan2(referencePoint.y - p0y, referencePoint.x - p0x)) * 180 / M_PI;

@@ -1,16 +1,17 @@
 ﻿  Source.cpp
-Source.cpp(231): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(232): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(259): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(260): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(269): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(273): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(299): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(304): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(330): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-Source.cpp(339): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
-Source.cpp(340): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+Source.cpp(234): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(235): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(269): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(270): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(279): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(283): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(310): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(315): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(342): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(346): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(357): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
+Source.cpp(358): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   Generating code
   All 342 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
-  Eulerian_ST.vcxproj -> C:\Users\Computing\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe
+  Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe
