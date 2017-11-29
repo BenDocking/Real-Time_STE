@@ -193,7 +193,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 			if (fr == hdr.frames - 1) {
 				lastFrame = true;
 			}
-			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
