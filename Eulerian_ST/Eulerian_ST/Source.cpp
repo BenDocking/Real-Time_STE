@@ -193,7 +193,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 			if (fr == hdr.frames - 1) {
 				lastFrame = true;
 			}
-			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
@@ -230,9 +230,9 @@ cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 
 void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 10; //block size
-	int stepSize = 10; //step size of blocks
-	int blocksH = ceil(hdr.h / N);
-	int blocksW = ceil(hdr.w / N);
+	int stepSize = 5; //step size of blocks
+	int blocksH = ceil(hdr.h / stepSize);
+	int blocksW = ceil(hdr.w / stepSize);
 	int similarityMeasure; //0 = SAD .. 1 = SSD 
 	cv::Mat currentFrame;
 	cv::Mat referenceFrame;
@@ -250,7 +250,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 	//checkErr(err, "Cannot create the command queue");
 
 	//loop through frames
-	for (int fr = 1; fr < hdr.frames - 1; fr++) {
+	for (int fr = 1; fr < hdr.frames; fr++) {
 		//forwards prediction
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
@@ -317,8 +317,8 @@ cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, 
 
 void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure) {
 	//for all blocks in frame
-	for (int x = 0; x < blocksW; x++) {
-		for (int y = 0; y < blocksH; y++) {
+	for (int x = 0; x < blocksW-1; x++) {
+		for (int y = 0; y < blocksH-1; y++) {
 			//current frame reference to be searched for in previous frame
 			const cv::Point currentPoint(x * stepSize, y * stepSize);
 			int idx = x + y * blocksW;
@@ -330,8 +330,8 @@ void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Poin
 			cv::Point referencePoint(currentPoint.x, currentPoint.y);
 
 			//loop over all posible blocks within search window/ all macroblocks
-			for (int row = -N; row < N; row++) {
-				for (int col = -N; col < N; col++) {
+			for (int row = -10; row < 10; row++) {
+				for (int col = -10; col < 10; col++) {
 					//Refererence a block to search on the previous frame
 					cv::Point referencePoint(currentPoint.x + row, currentPoint.y + col);
 
