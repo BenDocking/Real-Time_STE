@@ -242,6 +242,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 
 	std::cout << "Enter number corresponding to similarity measure:\n\n1. SAD\n2. SSD\n\n";
 	std::cin >> similarityMeasure;
+	similarityMeasure--;
 
 	std::string window = "BM";
 	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
