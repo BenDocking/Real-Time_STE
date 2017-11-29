@@ -13,7 +13,7 @@
 #include <opencv2/opencv.hpp>
 #include <CL/cl.hpp>
 
-//#include "Utils.h"
+#include "Utils.h"
 
 class Speckle_Results 
 {
@@ -76,7 +76,89 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
 cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N);
 void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure);
 
+void print_help() {
+	std::cerr << "Application usage:" << std::endl;
+
+	std::cerr << "  -p : select platform " << std::endl;
+	std::cerr << "  -d : select device" << std::endl;
+	std::cerr << "  -l : list all platforms and devices" << std::endl;
+	std::cerr << "  -h : print this message" << std::endl;
+}
+
 int main(int argc, char **argv) {
+	//handle command line options such as device selection, verbosity, etc.
+	int platform_id = 0;
+	int device_id = 0;
+
+	for (int i = 1; i < argc; i++) {
+		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platform_id = atoi(argv[++i]); }
+		else if ((strcmp(argv[i], "-d") == 0) && (i < (argc - 1))) { device_id = atoi(argv[++i]); }
+		else if (strcmp(argv[i], "-l") == 0) { std::cout << ListPlatformsDevices() << std::endl; }
+		else if (strcmp(argv[i], "-h") == 0) { print_help(); }
+	}
+
+	//detect any potential exceptions
+	try {
+		//host operations
+		//Select computing devices
+		cl::Context context = GetContext(platform_id, device_id);
+
+		//display the selected device
+		std::cout << "Running on " << GetPlatformName(platform_id) << ", " << GetDeviceName(platform_id, device_id) << std::endl;
+
+		//create a queue to which we will push commands for the device
+		cl::CommandQueue queue(context);
+
+		//Load & build the device code
+		cl::Program::Sources sources;
+
+		AddSources(sources, "kernels.cl");
+
+		cl::Program program(context, sources);
+
+		//build and debug the kernel code
+		try {
+			program.build();
+		}
+		catch (const cl::Error& err) {
+			std::cout << "Build Status: " << program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
+			std::cout << "Build Options:\t" << program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
+			std::cout << "Build Log:\t " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
+			throw err;
+		}
+
+		//device - buffers
+		//cl::Buffer dev_image_before(context, CL_MEM_READ_ONLY, image_before.size());
+		//cl::Buffer dev_image_after(context, CL_MEM_READ_WRITE, image_after.size());
+		//cl::Buffer dev_convolution_mask(context, CL_MEM_READ_ONLY, convolution_mask.size()*sizeof(float));
+
+		//device operations
+
+		//Copy to device memory
+		//queue.enqueueWriteBuffer(dev_image_before, CL_TRUE, 0, image_before.size(), &image_before[0]);
+		//queue.enqueueWriteBuffer(dev_convolution_mask, CL_TRUE, 0, convolution_mask.size()*sizeof(float), &convolution_mask[0]);
+
+		//Setup and execute the kernel (i.e. device code)
+		cl::Kernel kernel = cl::Kernel(program, "identity");
+		//kernel.setArg(0, dev_image_before);
+		//kernel.setArg(1, dev_image_after);
+		//kernel.setArg(2, dev_convolution_mask);
+
+		//queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_width*image_height), cl::NullRange);
+
+		//copy the result from device to host
+		//queue.enqueueReadBuffer(dev_image_after, CL_TRUE, 0, image_after.size(), &image_after[0]);
+
+		//loop until Esc is pressed
+		//ImageIO::MainLoop();
+	}
+	catch (const cl::Error& err) {
+		std::cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << std::endl;
+	}
+	catch (const exception& exc) {
+		std::cerr << "ERROR: " << exc.what() << std::endl;
+	}
+
 	FILE *fp = ReadFile();
 	uFileHeader hdr = ReadHeader(fp);
 	Speckle_Results *sr = ReadImageData(fp, hdr);
@@ -268,6 +350,9 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 			for (std::size_t j = 0; j < blocksH-1; j++)
 			{
 				cv::Scalar intensity = currentFrame.at<uchar>(j * stepSize, i * stepSize);
+				//for (std::size_t x = 0; x < (N * N); x++) {
+				//	intensity = intensity + currentFrame.at<uchar>(j * stepSize, i * stepSize);
+				//}
 				int iVal = intensity.val[0];
 				if (iVal < 90) {
 					lineColour = cv::Scalar(0, 255, 255);
