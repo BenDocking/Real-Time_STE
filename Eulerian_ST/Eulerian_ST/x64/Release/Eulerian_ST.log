@@ -1,17 +1,21 @@
 ﻿  Source.cpp
-Source.cpp(316): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(317): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(352): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(356): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(365): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(369): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(396): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(401): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(428): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-Source.cpp(432): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-Source.cpp(443): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
-Source.cpp(444): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  Generating code
-  All 789 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
-  Finished generating code
-  Eulerian_ST.vcxproj -> C:\Users\Computing\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe
+Source.cpp(141): error C2664: 'void BlockMatchingParallel(uFileHeader,Speckle_Results,cl::Context,cl::Program)': cannot convert argument 2 from 'Speckle_Results *' to 'Speckle_Results'
+  Source.cpp(141): note: No constructor could take the source type, or constructor overload resolution was ambiguous
+Source.cpp(286): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(287): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(324): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(328): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(337): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(341): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(374): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(379): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(406): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(410): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(421): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
+Source.cpp(422): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+Source.cpp(437): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(438): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(457): error C2373: 'motion': redefinition; different type modifiers
+  Source.cpp(444): note: see declaration of 'motion'
+Source.cpp(458): error C2373: 'details': redefinition; different type modifiers
+  Source.cpp(445): note: see declaration of 'details'

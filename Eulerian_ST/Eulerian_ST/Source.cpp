@@ -12,6 +12,7 @@
 #include <math.h>
 #include <opencv2/opencv.hpp>
 #include <CL/cl.hpp>
+#include <time.h>
 
 #include "Utils.h"
 
@@ -72,9 +73,10 @@ FILE* ReadFile();
 uFileHeader ReadHeader(FILE *fp);
 Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr);
 cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
-void BlockMatching(uFileHeader hdr, Speckle_Results *sr);
+void BlockMatchingSerial(uFileHeader hdr, Speckle_Results *sr);
 cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N);
 void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure);
+void BlockMatchingParallel(uFileHeader hdr, Speckle_Results sr, cl::Context context, cl::Program program);
 
 void print_help() {
 	std::cerr << "Application usage:" << std::endl;
@@ -106,9 +108,6 @@ int main(int argc, char **argv) {
 		//display the selected device
 		std::cout << "Running on " << GetPlatformName(platform_id) << ", " << GetDeviceName(platform_id, device_id) << std::endl;
 
-		//create a queue to which we will push commands for the device
-		cl::CommandQueue queue(context);
-
 		//Load & build the device code
 		cl::Program::Sources sources;
 
@@ -127,30 +126,23 @@ int main(int argc, char **argv) {
 			throw err;
 		}
 
-		//device - buffers
-		//cl::Buffer dev_image_before(context, CL_MEM_READ_ONLY, image_before.size());
-		//cl::Buffer dev_image_after(context, CL_MEM_READ_WRITE, image_after.size());
-		//cl::Buffer dev_convolution_mask(context, CL_MEM_READ_ONLY, convolution_mask.size()*sizeof(float));
+		//create a queue to which we will push commands for the device
+		cl::CommandQueue queue(context);
 
-		//device operations
+		//read and store data
+		FILE *fp = ReadFile();
+		clock_t timer = clock();
+		uFileHeader hdr = ReadHeader(fp);
+		Speckle_Results *sr = ReadImageData(fp, hdr);
+		timer = clock() - timer;
+		printf("It took %f seconds to read data from file pointer.\n\n", ((float)timer) / CLOCKS_PER_SEC);
 
-		//Copy to device memory
-		//queue.enqueueWriteBuffer(dev_image_before, CL_TRUE, 0, image_before.size(), &image_before[0]);
-		//queue.enqueueWriteBuffer(dev_convolution_mask, CL_TRUE, 0, convolution_mask.size()*sizeof(float), &convolution_mask[0]);
-
-		//Setup and execute the kernel (i.e. device code)
-		cl::Kernel kernel = cl::Kernel(program, "identity");
-		//kernel.setArg(0, dev_image_before);
-		//kernel.setArg(1, dev_image_after);
-		//kernel.setArg(2, dev_convolution_mask);
-
-		//queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_width*image_height), cl::NullRange);
-
-		//copy the result from device to host
-		//queue.enqueueReadBuffer(dev_image_after, CL_TRUE, 0, image_after.size(), &image_after[0]);
-
-		//loop until Esc is pressed
-		//ImageIO::MainLoop();
+		BlockMatchingSerial(hdr, sr);
+		BlockMatchingParallel(hdr, sr, context, program);
+		cv::destroyAllWindows();
+		system("pause");
+		exit(-1);
+		return 0;
 	}
 	catch (const cl::Error& err) {
 		std::cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << std::endl;
@@ -158,29 +150,6 @@ int main(int argc, char **argv) {
 	catch (const exception& exc) {
 		std::cerr << "ERROR: " << exc.what() << std::endl;
 	}
-
-	FILE *fp = ReadFile();
-	uFileHeader hdr = ReadHeader(fp);
-	Speckle_Results *sr = ReadImageData(fp, hdr);
-
-	//DisplayImage(0, hdr.w, hdr.h, sr);
-	/*
-	Mat ImageRaw = convertMat(hdr.w, hdr.h, 0, sr);
-	for (int x = 0; x < hdr.h; x++) {
-		for (int y = 0; y < hdr.w; y++) {
-			double iout = (double)ImageRaw.at<uchar>(x, y);
-
-			if (iout == 255) {
-				cout << x << ", " << y << endl;
-			}
-		}
-	}
-	*/
-	BlockMatching(hdr, sr);
-	cv::destroyAllWindows();
-	system("pause");
-	exit(-1);
-	return 0;
 }
 
 void InitialiseSpeckleResults(Speckle_Results sr[], int lengthFrames, int size_Sonix) {
@@ -310,12 +279,14 @@ cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr) {
 	return ImageRaw;
 }
 
-void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
+void BlockMatchingSerial(uFileHeader hdr, Speckle_Results *sr) {
 	int N = 10; //block size
+	double framerate;
 	int stepSize = 5; //step size of blocks
 	int blocksH = ceil(hdr.h / stepSize);
 	int blocksW = ceil(hdr.w / stepSize);
 	int similarityMeasure; //0 = SAD .. 1 = SSD 
+	time_t timer;
 	cv::Mat currentFrame;
 	cv::Mat referenceFrame;
 	//point array for outputs
@@ -334,6 +305,7 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 
 	//loop through frames
 	for (int fr = 1; fr < hdr.frames; fr++) {
+		timer = clock();
 		//forwards prediction
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
@@ -379,9 +351,15 @@ void BlockMatching(uFileHeader hdr, Speckle_Results *sr) {
 				}
 			}
 		}
+		timer = clock() - timer;
+		framerate = 1 / (((float)timer) / CLOCKS_PER_SEC);
 		char frameInfo[200];
 		sprintf(frameInfo, "Frame %d of %d", fr, hdr.frames);
 		cv::putText(display, frameInfo, cvPoint(30, 30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
+		sprintf(frameInfo, "Frame rate: %f", framerate);
+		cv::putText(display, frameInfo, cvPoint(30, 45), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
+		sprintf(frameInfo, "Frame time: %f", ((float)timer) / CLOCKS_PER_SEC);
+		cv::putText(display, frameInfo, cvPoint(30, 60), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
 		imshow(window, display);
 		cv::waitKey(1);
 	}
@@ -450,4 +428,43 @@ void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Poin
 			}
 		}
 	}
+}
+
+void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program) {
+	int N = 10; //block size
+	double framerate;
+	int stepSize = 5; //step size of blocks
+	int blocksH = ceil(hdr.h / stepSize);
+	int blocksW = ceil(hdr.w / stepSize);
+	int similarityMeasure; //0 = SAD .. 1 = SSD 
+	time_t timer;
+	cv::Mat currentFrame;
+	cv::Mat referenceFrame;
+	//point array for outputs
+	cv::Point * motion = new cv::Point[blocksH * blocksW];
+	cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
+
+	//Convert Mat data to char pointer array buffer
+	char * currentBuffer = reinterpret_cast<char *>(currentFrame.data);
+	char * referenceBuffer = reinterpret_cast<char *>(referenceFrame.data);
+
+	//create Image2D variables which can be used to pass image data to kernels
+	cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
+	cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
+	cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
+
+	//Create motion buffers to store motion for blocks
+	cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
+	cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+
+	//set arguments and create kernel
+	cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
+	kernel.setArg(0, referenceImage);
+	kernel.setArg(1, currentImage);
+	kernel.setArg(2, stepSize);
+	kernel.setArg(3, N);
+	kernel.setArg(4, hdr.w);
+	kernel.setArg(5, hdr.h);
+	kernel.setArg(6, motion);
+	kernel.setArg(7, details);
 }
