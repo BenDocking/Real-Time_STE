@@ -76,7 +76,7 @@ cv::Mat convertMat(int hdr_width, int hdr_height, int fr, Speckle_Results *sr);
 void BlockMatchingSerial(uFileHeader hdr, Speckle_Results *sr);
 cv::Vec3i Closest(const cv::Mat& referenceFrame, const cv::Point& currentPoint, const int searchWindow, const int width, const int height, const int N);
 void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Point * &motion, cv::Point2f * &details, int N, int stepSize, int width, int height, int blocksW, int blocksH, int similarityMeasure);
-void BlockMatchingParallel(uFileHeader hdr, Speckle_Results sr, cl::Context context, cl::Program program);
+void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program, cl::CommandQueue queue);
 
 void print_help() {
 	std::cerr << "Application usage:" << std::endl;
@@ -137,8 +137,8 @@ int main(int argc, char **argv) {
 		timer = clock() - timer;
 		printf("It took %f seconds to read data from file pointer.\n\n", ((float)timer) / CLOCKS_PER_SEC);
 
-		BlockMatchingSerial(hdr, sr);
-		BlockMatchingParallel(hdr, sr, context, program);
+		//BlockMatchingSerial(hdr, sr);
+		BlockMatchingParallel(hdr, sr, context, program, queue);
 		cv::destroyAllWindows();
 		system("pause");
 		exit(-1);
@@ -430,7 +430,7 @@ void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Poin
 	}
 }
 
-void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program) {
+void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program, cl::CommandQueue queue) {
 	int N = 10; //block size
 	double framerate;
 	int stepSize = 5; //step size of blocks
@@ -440,31 +440,104 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 	time_t timer;
 	cv::Mat currentFrame;
 	cv::Mat referenceFrame;
-	//point array for outputs
-	cv::Point * motion = new cv::Point[blocksH * blocksW];
-	cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
+	std::string window = "BM";
+	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
 
-	//Convert Mat data to char pointer array buffer
-	char * currentBuffer = reinterpret_cast<char *>(currentFrame.data);
-	char * referenceBuffer = reinterpret_cast<char *>(referenceFrame.data);
+	for (int fr = 1; fr < hdr.frames; fr++) {
+		timer = clock();
+		//forwards prediction
+		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
+		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
+		//point array for outputs
+		//cv::Point * motion = new cv::Point[blocksH * blocksW];
+		//cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
 
-	//create Image2D variables which can be used to pass image data to kernels
-	cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
-	cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
-	cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
+		//Convert Mat data to char pointer array buffer
+		char * currentBuffer = reinterpret_cast<char *>(currentFrame.data);
+		char * referenceBuffer = reinterpret_cast<char *>(referenceFrame.data);
 
-	//Create motion buffers to store motion for blocks
-	cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
-	cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+		//create Image2D variables which can be used to pass image data to kernels
+		cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
+		cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
+		cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
 
-	//set arguments and create kernel
-	cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
-	kernel.setArg(0, referenceImage);
-	kernel.setArg(1, currentImage);
-	kernel.setArg(2, stepSize);
-	kernel.setArg(3, N);
-	kernel.setArg(4, hdr.w);
-	kernel.setArg(5, hdr.h);
-	kernel.setArg(6, motion);
-	kernel.setArg(7, details);
+		//Create motion buffers to store motion for blocks
+		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
+		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+
+		//set arguments and create kernel
+		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
+		kernel.setArg(0, referenceImage);
+		kernel.setArg(1, currentImage);
+		kernel.setArg(2, hdr.w);
+		kernel.setArg(3, hdr.h);
+		kernel.setArg(4, stepSize);
+		kernel.setArg(5, N);
+		kernel.setArg(6, motion);
+		kernel.setArg(7, details);
+
+		//Queue kernel with global range spanning all blocks
+		cl::NDRange global((size_t)blocksW, (size_t)blocksH, 1);
+		queue.enqueueNDRangeKernel(kernel, 0, global, cl::NullRange);
+
+		//Read motion buffer from device
+		cl_int2 * motionBuffer = new cl_int2[blocksH * blocksW];
+		cl_float2 * detailsBuffer = new cl_float2[blocksH * blocksW];
+
+		queue.enqueueReadBuffer(motion, 0, 0, sizeof(cl_int2) * (blocksH * blocksW), motionBuffer);
+		queue.enqueueReadBuffer(details, 0, 0, sizeof(cl_float2) * (blocksH * blocksW), detailsBuffer);
+
+		cv::Mat display;
+		cvtColor(currentFrame, display, CV_GRAY2RGB);
+
+		bool drawGrid = false;
+		cv::Scalar rectColour = cv::Scalar(255);
+		cv::Scalar lineColour = cv::Scalar(0, 255, 255);
+
+		for (std::size_t i = 0; i < blocksW - 1; i++)
+		{
+			for (std::size_t j = 0; j < blocksH - 1; j++)
+			{
+				cv::Scalar intensity = currentFrame.at<uchar>(j * stepSize, i * stepSize);
+				//for (std::size_t x = 0; x < (N * N); x++) {
+				//	intensity = intensity + currentFrame.at<uchar>(j * stepSize, i * stepSize);
+				//}
+				int iVal = intensity.val[0];
+				if (iVal < 90) {
+					lineColour = cv::Scalar(0, 255, 255);
+				}
+				else {
+					lineColour = cv::Scalar(0, 0, 255);
+				}
+				if (iVal > 30) {
+					//Calculate repective position of motion vector
+					int idx = i + j * blocksW;
+
+					//Offset drawn point to represent middle rather than top left of block
+					cv::Point offset(N / 2, N / 2);
+					cv::Point pos(i * stepSize, j * stepSize);
+					cv::Point mVec(motionBuffer[idx].x, motionBuffer[idx].y);
+
+					if (drawGrid) {
+						rectangle(display, pos, pos + cv::Point(N, N), rectColour);
+					}
+					//only display motion vectors with motion
+					if (detailsBuffer[idx].y != 0 || detailsBuffer[idx].y != 0) {
+						arrowedLine(display, pos + offset, mVec + offset, lineColour);
+					}
+				}
+			}
+		}
+		timer = clock() - timer;
+		framerate = 1 / (((float)timer) / CLOCKS_PER_SEC);
+		char frameInfo[200];
+		sprintf(frameInfo, "Frame %d of %d", fr, hdr.frames);
+		cv::putText(display, frameInfo, cvPoint(30, 30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
+		sprintf(frameInfo, "Frame rate: %f", framerate);
+		cv::putText(display, frameInfo, cvPoint(30, 45), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
+		sprintf(frameInfo, "Frame time: %f", ((float)timer) / CLOCKS_PER_SEC);
+		cv::putText(display, frameInfo, cvPoint(30, 60), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
+		imshow(window, display);
+		cv::waitKey(1);
+	}
 }

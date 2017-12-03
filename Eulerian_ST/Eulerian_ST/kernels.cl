@@ -1,3 +1,63 @@
+//for image2d_t, doesnt interpolate points, sets out of bound pixels to 0
+__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+
+__kernel void ExhaustiveBlockMatchingSAD(
+	__read_only image2d_t referenceFrame,
+	__read_only image2d_t currentFrame,
+	uint w,
+	uint h,
+	const uint step_size,
+	const uint N, //blockSize
+	__global int2 * motion,
+	__global float2 * details)
+{
+	//get row col position within workgroup
+	const int x = get_global_id(0), y = get_global_id(1);
+	const int2 currentPoint = { x * step_size, y * step_size };
+
+	const int blocksW = get_global_size(0);
+	int idx = x + y * blocksW;
+
+	float dist = FLT_MAX;
+	float lowestSimilarity = FLT_MAX;
+	float similarityMeasure;
+
+	//loop over all blocks in search window
+	for (int i = -N; i < N; i++){ 
+		for (int j = -N; j < N; j++){ 
+			int2 referencePoint = { currentPoint.x + i, currentPoint.y + j };
+
+			//is block within bounds
+			if (referencePoint.y >= 0 && referencePoint.y < h - N && referencePoint.x >= 0 && referencePoint.x < w - N) {
+				//calculate sum absolute difference
+				for (int m = 0; m < N; m++) { 
+					for (int n = 0; n < N; n++) { 
+						int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + m, currentPoint.y + n)).x;
+						int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + m, referencePoint.y + n)).x;
+
+						if (curr < ref)
+							similarityMeasure += (ref - curr);
+						else
+							similarityMeasure += (curr - ref);
+					}
+				}
+				//prefer nearer blocks
+				float currentDist = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
+
+				if (similarityMeasure < lowestSimilarity || (similarityMeasure == lowestSimilarity && currentDist <= dist)) { 
+					lowestSimilarity = similarityMeasure;
+					dist = currentDist;
+					float p0x = currentPoint.x;
+					float p0y = currentPoint.y - sqrt((float)(((referencePoint.x - p0x) * (referencePoint.x - p0x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
+					float angle = (2 * atan2(referencePoint.y - p0y, referencePoint.x - p0x)) * 180 / M_PI;
+					motion[idx] = referencePoint;
+					details[idx] = (float2)(angle, dist); 
+				}
+			}
+		}
+	}
+}
+
 //a simple OpenCL kernel which copies all pixels from A to B
 __kernel void identity(__global const uchar4* A, __global uchar4* B) {
 	int id = get_global_id(0);
