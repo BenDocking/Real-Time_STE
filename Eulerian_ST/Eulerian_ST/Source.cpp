@@ -244,7 +244,7 @@ Speckle_Results* ReadImageData(FILE *fp, uFileHeader hdr) {
 			if (fr == hdr.frames - 1) {
 				lastFrame = true;
 			}
-			DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
+			//DisplayImage(fr, hdr.w, hdr.h, sr, "Image_Raw"); //display image frame
 		}
 		delete[] data;
 		break;
@@ -448,22 +448,20 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		//forwards prediction
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
-		//point array for outputs
-		//cv::Point * motion = new cv::Point[blocksH * blocksW];
-		//cv::Point2f * details = new cv::Point2f[blocksH * blocksW];
 
-		//Convert Mat data to char pointer array buffer
-		char * currentBuffer = reinterpret_cast<char *>(currentFrame.data);
-		char * referenceBuffer = reinterpret_cast<char *>(referenceFrame.data);
-
-		//create Image2D variables which can be used to pass image data to kernels
-		cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
-		cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
-		cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
+		char * currentBuffer = sr[fr].Image;
+			//reinterpret_cast<char *>(currentFrame.data);
+		char * referenceBuffer = sr[fr - 1].Image;
+			//reinterpret_cast<char *>(referenceFrame.data);
 
 		//Create motion buffers to store motion for blocks
 		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
 		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+
+		//create Image2D variables which can be used to pass image data to kernels
+		cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
+		cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
+		cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
 
 		//set arguments and create kernel
 		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");

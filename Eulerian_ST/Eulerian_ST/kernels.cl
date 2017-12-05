@@ -11,8 +11,9 @@ __kernel void ExhaustiveBlockMatchingSAD(
 	__global int2 * motion,
 	__global float2 * details)
 {
-	//get row col position within workgroup
-	const int x = get_global_id(0), y = get_global_id(1);
+	//get all row col positions within workgroup
+	const int x = get_global_id(0);
+	const int y = get_global_id(1);
 	const int2 currentPoint = { x * step_size, y * step_size };
 
 	const int blocksW = get_global_size(0);
