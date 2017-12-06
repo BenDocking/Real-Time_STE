@@ -1,9 +1,6 @@
-//for image2d_t, doesnt interpolate points, sets out of bound pixels to 0
-__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void ExhaustiveBlockMatchingSAD(
-	__read_only image2d_t referenceFrame,
-	__read_only image2d_t currentFrame,
+	__global char * referenceFrame,
+	__global char * currentFrame,
 	uint w,
 	uint h,
 	const uint step_size,
@@ -16,7 +13,9 @@ __kernel void ExhaustiveBlockMatchingSAD(
 	const int y = get_global_id(1);
 	const int2 currentPoint = { x * step_size, y * step_size };
 
+	//get amount of blocks in x / width of image
 	const int blocksW = get_global_size(0);
+	//calculate index for char array pixel values
 	int idx = x + y * blocksW;
 
 	float dist = FLT_MAX;
@@ -33,8 +32,21 @@ __kernel void ExhaustiveBlockMatchingSAD(
 				//calculate sum absolute difference
 				for (int m = 0; m < N; m++) { 
 					for (int n = 0; n < N; n++) { 
-						int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + m, currentPoint.y + n)).x;
-						int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + m, referencePoint.y + n)).x;
+						//int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + m, currentPoint.y + n)).x;
+						//int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + m, referencePoint.y + n)).x;
+
+						int tempX = currentPoint.x + m;
+						int tempY = currentPoint.y + n;
+						int id = tempX + tempY * blocksW;
+						int curr = (int)currentFrame[id];
+						tempX = referencePoint.x + m;
+						tempY = referencePoint.y + n;
+						id = tempX + tempY * blocksW;
+						int ref = (int)referenceFrame[id];
+
+						if (curr < 0){ 
+							curr = curr + 256;
+						}
 
 						if (curr < ref)
 							similarityMeasure += (ref - curr);

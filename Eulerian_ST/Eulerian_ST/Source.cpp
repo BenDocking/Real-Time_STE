@@ -450,23 +450,31 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
 
 		char * currentBuffer = sr[fr].Image;
-			//reinterpret_cast<char *>(currentFrame.data);
 		char * referenceBuffer = sr[fr - 1].Image;
-			//reinterpret_cast<char *>(referenceFrame.data);
+
+		///check intensity values
+		/*for (int i = 0; i < hdr.w-1; i++) {
+			for (int j = 0; j < hdr.h-1; j++) {
+				int idx = i + j * hdr.w;
+				int pVal = (int)currentBuffer[idx];
+				cv::Scalar intensity = currentFrame.at<uchar>(j, i);
+				int iVal = intensity.val[0];
+				std::cout << pVal << ":" << iVal << std::endl;
+			}
+		}*/
 
 		//Create motion buffers to store motion for blocks
 		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
 		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+		//create image detail buffers
+		cl::Buffer current(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &currentBuffer[0]);
+		cl::Buffer reference(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &referenceBuffer[0]);
 
-		//create Image2D variables which can be used to pass image data to kernels
-		cl::ImageFormat imFormat(CL_INTENSITY, CL_UNSIGNED_INT8);
-		cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, currentBuffer);
-		cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imFormat, hdr.w, hdr.h, 0, referenceBuffer);
 
 		//set arguments and create kernel
 		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
-		kernel.setArg(0, referenceImage);
-		kernel.setArg(1, currentImage);
+		kernel.setArg(0, current);
+		kernel.setArg(1, reference);
 		kernel.setArg(2, hdr.w);
 		kernel.setArg(3, hdr.h);
 		kernel.setArg(4, stepSize);
@@ -536,6 +544,6 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		sprintf(frameInfo, "Frame time: %f", ((float)timer) / CLOCKS_PER_SEC);
 		cv::putText(display, frameInfo, cvPoint(30, 60), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
 		imshow(window, display);
-		cv::waitKey(1);
+		cv::waitKey(0);
 	}
 }
