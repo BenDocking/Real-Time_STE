@@ -17,26 +17,25 @@ __kernel void ExhaustiveBlockMatchingSAD(
 
 	const int2 currentPoint = { x * step_size, y * step_size };
 
-	motion[idx] = 300;
-	details[idx] = (float2)(1.00, 2.00);
-	/*
+	//motion[idx] = 300;
+	//details[idx] = (float2)(1.00, 2.00);
+
 	float dist = FLT_MAX;
 	float lowestSimilarity = FLT_MAX;
 	float similarityMeasure;
 
-	//loop over all blocks in search window
+	//search window = 20 * 20
 	for (int i = -N; i < N; i++){ 
 		for (int j = -N; j < N; j++){ 
+			//referencePoint = current point of reference in search window
 			int2 referencePoint = { currentPoint.x + i, currentPoint.y + j };
 
-			//is block within bounds
+			//is block within bounds - block size = 10 * 10
 			if (referencePoint.y >= 0 && referencePoint.y < h - N && referencePoint.x >= 0 && referencePoint.x < w - N) {
 				//calculate sum absolute difference
+				//loop through current block
 				for (int m = 0; m < N; m++) { 
 					for (int n = 0; n < N; n++) { 
-						//int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + m, currentPoint.y + n)).x;
-						//int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + m, referencePoint.y + n)).x;
-
 						int tempX = currentPoint.x + m;
 						int tempY = currentPoint.y + n;
 						int id = tempX + tempY * blocksW;
@@ -71,7 +70,6 @@ __kernel void ExhaustiveBlockMatchingSAD(
 			}
 		}
 	}
-	*/
 }
 
 //a simple OpenCL kernel which copies all pixels from A to B

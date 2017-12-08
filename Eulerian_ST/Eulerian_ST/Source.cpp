@@ -466,12 +466,14 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		}*/
 
 		//create image detail buffers
-		cl::Buffer current(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &currentBuffer[0]);
-		cl::Buffer reference(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &referenceBuffer[0]);
+		cl::Buffer current(context, CL_MEM_READ_ONLY, sizeof(char) * (hdr.w * hdr.h));
+		cl::Buffer reference(context, CL_MEM_READ_ONLY, sizeof(char) * (hdr.w * hdr.h));
 		//Create motion buffers to store motion for blocks
 		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
 		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
-		
+
+		queue.enqueueWriteBuffer(current, CL_TRUE, 0, sizeof(char) * (hdr.w * hdr.h), &currentBuffer[0]);
+		queue.enqueueWriteBuffer(reference, CL_TRUE, 0, sizeof(char) * (hdr.w * hdr.h), &referenceBuffer[0]);
 
 		//set arguments and create kernel
 		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
@@ -488,23 +490,21 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		cl::NDRange global((size_t)blocksW, (size_t)blocksH, 1);
 		queue.enqueueNDRangeKernel(kernel, 0, global, cl::NullRange);
 
-		//Read motion buffer from device
 		cl_int2 * motionBuffer = new cl_int2[blocksH * blocksW];
 		cl_float2 * detailsBuffer = new cl_float2[blocksH * blocksW];
 
-		queue.enqueueReadBuffer(motion, 0, 0, sizeof(cl_int2) * (blocksH * blocksW), motionBuffer);
-		queue.enqueueReadBuffer(details, 0, 0, sizeof(cl_float2) * (blocksH * blocksW), detailsBuffer);
+		///Read motion and details buffer from device
+		//queue.enqueueReadBuffer(motion, 0, 0, sizeof(cl_int2) * (blocksH * blocksW), motionBuffer);
+		//queue.enqueueReadBuffer(details, 0, 0, sizeof(cl_float2) * (blocksH * blocksW), detailsBuffer);
+		queue.enqueueReadBuffer(motion, CL_TRUE, 0, sizeof(cl_int2) * (blocksH * blocksW), &motionBuffer[0]);
+		queue.enqueueReadBuffer(details, CL_TRUE, 0, sizeof(cl_float2) * (blocksH * blocksW), &detailsBuffer[0]);
 
 		timer = clock() - timer;
 
 		for (int i = 0; i < (hdr.w * hdr.h); i++)
 		{
-			int s = detailsBuffer[i].x;
-			int q = detailsBuffer[i].y;
-			int g = motionBuffer[i].x;
-			int h = motionBuffer[i].y;
-			if (s != 0 || q != 0 || g != 0 || h != 0) {
-				int h = 0;
+			if (detailsBuffer[i].x != 0 || motionBuffer[i].x != 0) {
+				std::cout << motionBuffer[i].x << std::endl;
 			}
 		}
 
