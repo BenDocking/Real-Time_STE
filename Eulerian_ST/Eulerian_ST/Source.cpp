@@ -123,6 +123,8 @@ int main(int argc, char **argv) {
 			std::cout << "Build Status: " << program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
 			std::cout << "Build Options:\t" << program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
 			std::cout << "Build Log:\t " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(context.getInfo<CL_CONTEXT_DEVICES>()[0]) << std::endl;
+			char * i = new char[200];
+			std::cin >> i;
 			throw err;
 		}
 
@@ -463,13 +465,13 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 			}
 		}*/
 
-		//Create motion buffers to store motion for blocks
-		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
-		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
 		//create image detail buffers
 		cl::Buffer current(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &currentBuffer[0]);
 		cl::Buffer reference(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(char) * (hdr.w * hdr.h), &referenceBuffer[0]);
-
+		//Create motion buffers to store motion for blocks
+		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
+		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
+		
 
 		//set arguments and create kernel
 		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
@@ -492,6 +494,19 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 
 		queue.enqueueReadBuffer(motion, 0, 0, sizeof(cl_int2) * (blocksH * blocksW), motionBuffer);
 		queue.enqueueReadBuffer(details, 0, 0, sizeof(cl_float2) * (blocksH * blocksW), detailsBuffer);
+
+		timer = clock() - timer;
+
+		for (int i = 0; i < (hdr.w * hdr.h); i++)
+		{
+			int s = detailsBuffer[i].x;
+			int q = detailsBuffer[i].y;
+			int g = motionBuffer[i].x;
+			int h = motionBuffer[i].y;
+			if (s != 0 || q != 0 || g != 0 || h != 0) {
+				int h = 0;
+			}
+		}
 
 		cv::Mat display;
 		cvtColor(currentFrame, display, CV_GRAY2RGB);
@@ -534,7 +549,6 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 				}
 			}
 		}
-		timer = clock() - timer;
 		framerate = 1 / (((float)timer) / CLOCKS_PER_SEC);
 		char frameInfo[200];
 		sprintf(frameInfo, "Frame %d of %d", fr, hdr.frames);
@@ -544,6 +558,6 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		sprintf(frameInfo, "Frame time: %f", ((float)timer) / CLOCKS_PER_SEC);
 		cv::putText(display, frameInfo, cvPoint(30, 60), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
 		imshow(window, display);
-		cv::waitKey(0);
+		cv::waitKey(1);
 	}
 }

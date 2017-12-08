@@ -1,24 +1,24 @@
 ﻿  Source.cpp
-Source.cpp(286): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(287): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(324): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(328): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(337): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(341): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(374): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(379): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-Source.cpp(406): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-Source.cpp(410): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-Source.cpp(421): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
-Source.cpp(422): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-Source.cpp(437): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(438): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(501): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(505): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(514): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(518): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(439): warning C4101: 'similarityMeasure': unreferenced local variable
+Source.cpp(288): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(289): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(326): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(330): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(339): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(343): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(376): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(381): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+Source.cpp(408): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(412): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+Source.cpp(423): warning C4244: 'initializing': conversion from 'const int' to 'float', possible loss of data
+Source.cpp(424): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+Source.cpp(439): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(440): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(511): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(515): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(524): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(528): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(441): warning C4101: 'similarityMeasure': unreferenced local variable
   Generating code
-  All 846 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  All 821 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe

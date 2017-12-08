@@ -1,6 +1,6 @@
 __kernel void ExhaustiveBlockMatchingSAD(
-	__global char * referenceFrame,
 	__global char * currentFrame,
+	__global char * referenceFrame,
 	uint w,
 	uint h,
 	const uint step_size,
@@ -11,13 +11,15 @@ __kernel void ExhaustiveBlockMatchingSAD(
 	//get all row col positions within workgroup
 	const int x = get_global_id(0);
 	const int y = get_global_id(1);
-	const int2 currentPoint = { x * step_size, y * step_size };
-
 	//get amount of blocks in x / width of image
 	const int blocksW = get_global_size(0);
-	//calculate index for char array pixel values
 	int idx = x + y * blocksW;
 
+	const int2 currentPoint = { x * step_size, y * step_size };
+
+	motion[idx] = 300;
+	details[idx] = (float2)(1.00, 2.00);
+	/*
 	float dist = FLT_MAX;
 	float lowestSimilarity = FLT_MAX;
 	float similarityMeasure;
@@ -69,6 +71,7 @@ __kernel void ExhaustiveBlockMatchingSAD(
 			}
 		}
 	}
+	*/
 }
 
 //a simple OpenCL kernel which copies all pixels from A to B
