@@ -17,8 +17,8 @@ __kernel void ExhaustiveBlockMatchingSAD(
 
 	const int2 currentPoint = { x * step_size, y * step_size };
 
-	//motion[idx] = 300;
-	//details[idx] = (float2)(1.00, 2.00);
+	//motion[idx] = currentPoint;
+	//details[idx] = (float2)((int)currentFrame[280000], (int)referenceFrame[280000]);
 
 	float dist = FLT_MAX;
 	float lowestSimilarity = FLT_MAX;
@@ -29,11 +29,10 @@ __kernel void ExhaustiveBlockMatchingSAD(
 		for (int j = -N; j < N; j++){ 
 			//referencePoint = current point of reference in search window
 			int2 referencePoint = { currentPoint.x + i, currentPoint.y + j };
-
-			//is block within bounds - block size = 10 * 10
+			//is block within bounds
 			if (referencePoint.y >= 0 && referencePoint.y < h - N && referencePoint.x >= 0 && referencePoint.x < w - N) {
 				//calculate sum absolute difference
-				//loop through current block
+				//loop through current block - block size = 10 * 10
 				for (int m = 0; m < N; m++) { 
 					for (int n = 0; n < N; n++) { 
 						int tempX = currentPoint.x + m;
@@ -55,6 +54,7 @@ __kernel void ExhaustiveBlockMatchingSAD(
 							similarityMeasure += (curr - ref);
 					}
 				}
+
 				//prefer nearer blocks
 				float currentDist = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
 

@@ -503,9 +503,8 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 
 		for (int i = 0; i < (hdr.w * hdr.h); i++)
 		{
-			if (detailsBuffer[i].x != 0 || motionBuffer[i].x != 0) {
+			if (motionBuffer[i].x != 0)
 				std::cout << motionBuffer[i].x << std::endl;
-			}
 		}
 
 		cv::Mat display;
