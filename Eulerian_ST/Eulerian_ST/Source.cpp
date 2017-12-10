@@ -435,7 +435,7 @@ void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Poin
 void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program, cl::CommandQueue queue) {
 	int N = 10; //block size
 	double framerate;
-	int stepSize = 5; //step size of blocks
+	int stepSize = 1; //step size of blocks
 	int blocksH = ceil(hdr.h / stepSize);
 	int blocksW = ceil(hdr.w / stepSize);
 	int similarityMeasure; //0 = SAD .. 1 = SSD 
