@@ -13,16 +13,12 @@ Source.cpp(423): warning C4244: 'initializing': conversion from 'const int' to '
 Source.cpp(424): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 Source.cpp(439): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
 Source.cpp(440): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(506): warning C4244: 'initializing': conversion from 'cl_float' to 'int', possible loss of data
-Source.cpp(507): warning C4244: 'initializing': conversion from 'cl_float' to 'int', possible loss of data
-Source.cpp(526): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(530): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-Source.cpp(539): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-Source.cpp(543): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(512): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(514): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+Source.cpp(523): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+Source.cpp(527): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 Source.cpp(441): warning C4101: 'similarityMeasure': unreferenced local variable
   Generating code
-  11 of 822 functions ( 1.3%) were compiled, the rest were copied from previous compilation.
-    1 functions were new in current compilation
-    56 functions had inline decision re-evaluated but remain unchanged
+  All 832 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Release\Eulerian_ST.exe

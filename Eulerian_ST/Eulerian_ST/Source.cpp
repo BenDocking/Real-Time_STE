@@ -89,7 +89,7 @@ void print_help() {
 
 int main(int argc, char **argv) {
 	//handle command line options such as device selection, verbosity, etc.
-	int platform_id = 0;
+	int platform_id = 1;
 	int device_id = 0;
 
 	for (int i = 1; i < argc; i++) {
@@ -435,15 +435,17 @@ void BlockMatchingFrame(cv::Mat& currentFrame, cv::Mat& referenceFrame, cv::Poin
 void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context context, cl::Program program, cl::CommandQueue queue) {
 	int N = 10; //block size
 	double framerate;
-	int stepSize = 1; //step size of blocks
+	int stepSize = 3; //step size of blocks
 	int blocksH = ceil(hdr.h / stepSize);
 	int blocksW = ceil(hdr.w / stepSize);
 	int similarityMeasure; //0 = SAD .. 1 = SSD 
 	time_t timer;
 	cv::Mat currentFrame;
 	cv::Mat referenceFrame;
-	std::string window = "BM";
-	cv::namedWindow(window, cv::WINDOW_AUTOSIZE);
+	std::string window1 = "Parallel_Block_Matching_Image_1";
+	cv::namedWindow(window1, cv::WINDOW_AUTOSIZE);
+	std::string window2 = "Parallel_Block_Matching_Image_2";
+	cv::namedWindow(window2, cv::WINDOW_AUTOSIZE);
 
 	for (int fr = 1; fr < hdr.frames; fr++) {
 		timer = clock();
@@ -497,6 +499,7 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		
 		cv::Mat display;
 		cvtColor(currentFrame, display, CV_GRAY2RGB);
+		cv::Mat displayBlack(hdr.h, hdr.w, CV_8UC3, cv::Scalar(0, 0, 0));
 
 		bool drawGrid = false;
 		cv::Scalar rectColour = cv::Scalar(255);
@@ -515,7 +518,7 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 				else {
 					lineColour = cv::Scalar(0, 0, 255);
 				}
-				if (iVal > 30) {
+				if (iVal > 100) {
 					//Calculate repective position of motion vector
 					int idx = i + j * blocksW;
 
@@ -530,6 +533,7 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 					//only display vectors with motion
 					if (detailsBuffer[idx].y != 0 || detailsBuffer[idx].y != 0) {
 						arrowedLine(display, pos + offset, mVec + offset, lineColour);
+						arrowedLine(displayBlack, pos + offset, mVec + offset, lineColour);
 					}
 				}
 			}
@@ -543,7 +547,8 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		cv::putText(display, frameInfo, cvPoint(30, 45), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
 		sprintf(frameInfo, "Frame time: %f", ((float)timer) / CLOCKS_PER_SEC);
 		cv::putText(display, frameInfo, cvPoint(30, 60), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), 1, CV_AA);
-		imshow(window, display);
+		imshow(window1, display);
+		imshow(window2, displayBlack);
 		cv::waitKey(1);
 	}
 }

@@ -1,6 +1,27 @@
 //Create sampler for image2d_t that doesnt interpolate points, and sets out of bound pixels to 0
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
+inline int absolute_difference(int a, int b) {
+	return a < b ? b - a : a - b;
+}
+
+int sum_absolute_diff(image2d_t curr, image2d_t ref, int2 currPoint, int2 refPoint, int bSize) {
+	int sum = 0;
+
+	for (int i = 0; i < bSize; i++)
+	{
+		for (int j = 0; j < bSize; j++)
+		{
+			sum += absolute_difference(
+				read_imageui(curr, sampler, (int2)(currPoint.x + i, currPoint.y + j)).x,
+				read_imageui(ref, sampler, (int2)(refPoint.x + i, refPoint.y + j)).x
+			);
+		}
+	}
+
+	return sum;
+}
+
 __kernel void ExhaustiveBlockMatchingSAD(
 	__read_only image2d_t currentFrame,
 	__read_only image2d_t referenceFrame,
@@ -29,24 +50,8 @@ __kernel void ExhaustiveBlockMatchingSAD(
 			int2 referencePoint = { currentPoint.x + i, currentPoint.y + j };
 			//is block within bounds
 			if (referencePoint.y >= 0 && referencePoint.y < (height - N) && referencePoint.x >= 0 && referencePoint.x < (width - N)) { 
-					//calculate sum absolute difference
-					//loop through current block - block size = 10 * 10
-					for (int m = 0; m < N; m++) { 
-						for (int n = 0; n < N; n++) { 
-							int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + i, currentPoint.y + j)).x;
-							//int curr = (int)currentFrame[(currentPoint.x + m) + ((currentPoint.y + n) * blocksW)];
-							//int ref = (int)referenceFrame[(referencePoint.x + m) + ((referencePoint.y + n) * blocksW)];
-							int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + i, referencePoint.y + j)).x;
-							
-							//if (curr < 0) 
-							//	curr = curr + 256;
-
-							if (curr < ref)
-								similarityMeasure += (ref - curr);
-							else
-								similarityMeasure += (curr - ref);
-						}
-					}
+				//calculate sum absolute difference
+				similarityMeasure = sum_absolute_diff(currentFrame, referenceFrame, currentPoint, referencePoint, N);
 
 				//prefer nearer blocks
 				float currentDist = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
