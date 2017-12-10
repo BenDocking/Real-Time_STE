@@ -451,23 +451,18 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		referenceFrame = convertMat(hdr.w, hdr.h, fr - 1, sr);
 		currentFrame = convertMat(hdr.w, hdr.h, fr, sr);
 
-		char * currentBuffer = sr[fr].Image;
-		char * referenceBuffer = sr[fr - 1].Image;
+		char * currentBuffer = reinterpret_cast<char *>(currentFrame.data);
+		char * referenceBuffer = reinterpret_cast<char *>(referenceFrame.data);
+		
 
-		///check intensity values
-		/*for (int i = 0; i < hdr.w-1; i++) {
-			for (int j = 0; j < hdr.h-1; j++) {
-				int idx = i + j * hdr.w;
-				int pVal = (int)currentBuffer[idx];
-				cv::Scalar intensity = currentFrame.at<uchar>(j, i);
-				int iVal = intensity.val[0];
-				std::cout << pVal << ":" << iVal << std::endl;
-			}
-		}*/
+		cl::ImageFormat format(CL_R, CL_UNSIGNED_INT8);
+		cl::Image2D referenceImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, hdr.w, hdr.h, 0, referenceBuffer);
+		cl::Image2D currentImage(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, hdr.w, hdr.h, 0, currentBuffer);
 
 		//create image detail buffers
 		cl::Buffer current(context, CL_MEM_READ_ONLY, sizeof(char) * (hdr.w * hdr.h));
 		cl::Buffer reference(context, CL_MEM_READ_ONLY, sizeof(char) * (hdr.w * hdr.h));
+
 		//Create motion buffers to store motion for blocks
 		cl::Buffer motion(context, CL_MEM_WRITE_ONLY, sizeof(cl_int2) * (blocksH * blocksW));
 		cl::Buffer details(context, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * (blocksH * blocksW));
@@ -475,38 +470,31 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 		queue.enqueueWriteBuffer(current, CL_TRUE, 0, sizeof(char) * (hdr.w * hdr.h), &currentBuffer[0]);
 		queue.enqueueWriteBuffer(reference, CL_TRUE, 0, sizeof(char) * (hdr.w * hdr.h), &referenceBuffer[0]);
 
+
 		//set arguments and create kernel
 		cl::Kernel kernel(program, "ExhaustiveBlockMatchingSAD");
-		kernel.setArg(0, current);
-		kernel.setArg(1, reference);
-		kernel.setArg(2, hdr.w);
-		kernel.setArg(3, hdr.h);
-		kernel.setArg(4, stepSize);
-		kernel.setArg(5, N);
+		kernel.setArg(0, currentImage);
+		kernel.setArg(1, referenceImage);
+		kernel.setArg(2, N);
+		kernel.setArg(3, stepSize);
+		kernel.setArg(4, hdr.w);
+		kernel.setArg(5, hdr.h);
 		kernel.setArg(6, motion);
 		kernel.setArg(7, details);
 
-		//Queue kernel with global range spanning all blocks
+		//Queue kernel with 1D global range spanning all blocks
 		cl::NDRange global((size_t)blocksW, (size_t)blocksH, 1);
 		queue.enqueueNDRangeKernel(kernel, 0, global, cl::NullRange);
 
 		cl_int2 * motionBuffer = new cl_int2[blocksH * blocksW];
 		cl_float2 * detailsBuffer = new cl_float2[blocksH * blocksW];
 
-		///Read motion and details buffer from device
-		//queue.enqueueReadBuffer(motion, 0, 0, sizeof(cl_int2) * (blocksH * blocksW), motionBuffer);
-		//queue.enqueueReadBuffer(details, 0, 0, sizeof(cl_float2) * (blocksH * blocksW), detailsBuffer);
+		//Read motion and details buffer from device
 		queue.enqueueReadBuffer(motion, CL_TRUE, 0, sizeof(cl_int2) * (blocksH * blocksW), &motionBuffer[0]);
 		queue.enqueueReadBuffer(details, CL_TRUE, 0, sizeof(cl_float2) * (blocksH * blocksW), &detailsBuffer[0]);
 
 		timer = clock() - timer;
-
-		for (int i = 0; i < (hdr.w * hdr.h); i++)
-		{
-			if (motionBuffer[i].x != 0)
-				std::cout << motionBuffer[i].x << std::endl;
-		}
-
+		
 		cv::Mat display;
 		cvtColor(currentFrame, display, CV_GRAY2RGB);
 
@@ -519,9 +507,7 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 			for (std::size_t j = 0; j < blocksH - 1; j++)
 			{
 				cv::Scalar intensity = currentFrame.at<uchar>(j * stepSize, i * stepSize);
-				//for (std::size_t x = 0; x < (N * N); x++) {
-				//	intensity = intensity + currentFrame.at<uchar>(j * stepSize, i * stepSize);
-				//}
+
 				int iVal = intensity.val[0];
 				if (iVal < 90) {
 					lineColour = cv::Scalar(0, 255, 255);
@@ -541,13 +527,14 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 					if (drawGrid) {
 						rectangle(display, pos, pos + cv::Point(N, N), rectColour);
 					}
-					//only display motion vectors with motion
+					//only display vectors with motion
 					if (detailsBuffer[idx].y != 0 || detailsBuffer[idx].y != 0) {
 						arrowedLine(display, pos + offset, mVec + offset, lineColour);
 					}
 				}
 			}
 		}
+
 		framerate = 1 / (((float)timer) / CLOCKS_PER_SEC);
 		char frameInfo[200];
 		sprintf(frameInfo, "Frame %d of %d", fr, hdr.frames);

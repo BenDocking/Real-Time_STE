@@ -1,59 +1,52 @@
+//Create sampler for image2d_t that doesnt interpolate points, and sets out of bound pixels to 0
+__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+
 __kernel void ExhaustiveBlockMatchingSAD(
-	__global char * currentFrame,
-	__global char * referenceFrame,
-	uint w,
-	uint h,
-	const uint step_size,
-	const uint N, //blockSize
+	__read_only image2d_t currentFrame,
+	__read_only image2d_t referenceFrame,
+	const int N, //blockSize
+	const uint stepSize,
+	const int width,
+	const int height,
 	__global int2 * motion,
 	__global float2 * details)
 {
-	//get all row col positions within workgroup
-	const int x = get_global_id(0);
-	const int y = get_global_id(1);
-	//get amount of blocks in x / width of image
-	const int blocksW = get_global_size(0);
-	int idx = x + y * blocksW;
+	const int x = get_global_id(0); //w_g width ID
+	const int y = get_global_id(1); //w_g height ID
+	const int blocksW = get_global_size(0); //w_g width size
+	const int idx = x + y * blocksW; //1D idientifier 
 
-	const int2 currentPoint = { x * step_size, y * step_size };
-
-	//motion[idx] = currentPoint;
-	//details[idx] = (float2)((int)currentFrame[280000], (int)referenceFrame[280000]);
-
+	const int2 currentPoint = { x * stepSize, y * stepSize };
+	
 	float dist = FLT_MAX;
 	float lowestSimilarity = FLT_MAX;
 	float similarityMeasure;
 
 	//search window = 20 * 20
-	for (int i = -N; i < N; i++){ 
-		for (int j = -N; j < N; j++){ 
+	for (int i = -N; i < N; i++) { 
+		for (int j = -N; j < N; j++) { 
 			//referencePoint = current point of reference in search window
 			int2 referencePoint = { currentPoint.x + i, currentPoint.y + j };
 			//is block within bounds
-			if (referencePoint.y >= 0 && referencePoint.y < h - N && referencePoint.x >= 0 && referencePoint.x < w - N) {
-				//calculate sum absolute difference
-				//loop through current block - block size = 10 * 10
-				for (int m = 0; m < N; m++) { 
-					for (int n = 0; n < N; n++) { 
-						int tempX = currentPoint.x + m;
-						int tempY = currentPoint.y + n;
-						int id = tempX + tempY * blocksW;
-						int curr = (int)currentFrame[id];
-						tempX = referencePoint.x + m;
-						tempY = referencePoint.y + n;
-						id = tempX + tempY * blocksW;
-						int ref = (int)referenceFrame[id];
+			if (referencePoint.y >= 0 && referencePoint.y < (height - N) && referencePoint.x >= 0 && referencePoint.x < (width - N)) { 
+					//calculate sum absolute difference
+					//loop through current block - block size = 10 * 10
+					for (int m = 0; m < N; m++) { 
+						for (int n = 0; n < N; n++) { 
+							int curr = read_imageui(currentFrame, sampler, (int2)(currentPoint.x + i, currentPoint.y + j)).x;
+							//int curr = (int)currentFrame[(currentPoint.x + m) + ((currentPoint.y + n) * blocksW)];
+							//int ref = (int)referenceFrame[(referencePoint.x + m) + ((referencePoint.y + n) * blocksW)];
+							int ref = read_imageui(referenceFrame, sampler, (int2)(referencePoint.x + i, referencePoint.y + j)).x;
+							
+							//if (curr < 0) 
+							//	curr = curr + 256;
 
-						if (curr < 0){ 
-							curr = curr + 256;
+							if (curr < ref)
+								similarityMeasure += (ref - curr);
+							else
+								similarityMeasure += (curr - ref);
 						}
-
-						if (curr < ref)
-							similarityMeasure += (ref - curr);
-						else
-							similarityMeasure += (curr - ref);
 					}
-				}
 
 				//prefer nearer blocks
 				float currentDist = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));
