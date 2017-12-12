@@ -13,9 +13,9 @@ c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(4
 c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(424): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(439): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
 c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(440): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(509): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(511): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(520): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(524): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(512): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(514): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(523): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(527): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 c:\users\ben\documents\github\real-time_ste\eulerian_st\eulerian_st\source.cpp(441): warning C4101: 'similarityMeasure': unreferenced local variable
   Eulerian_ST.vcxproj -> C:\Users\Ben\Documents\GitHub\Real-Time_STE\Eulerian_ST\x64\Debug\Eulerian_ST.exe

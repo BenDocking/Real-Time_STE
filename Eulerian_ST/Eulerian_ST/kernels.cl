@@ -1,21 +1,16 @@
 //Create sampler for image2d_t that doesnt interpolate points, and sets out of bound pixels to 0
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
-inline int absolute_difference(int a, int b) {
-	return a < b ? b - a : a - b;
-}
-
-int sum_absolute_diff(image2d_t curr, image2d_t ref, int2 currPoint, int2 refPoint, int bSize) {
+int SumAbsoluteDifference(image2d_t currentImage, image2d_t referenceImage, int2 currentPoint, int2 referencePoint, int N) {
 	int sum = 0;
 
-	for (int i = 0; i < bSize; i++)
+	for (int i = 0; i < N; i++)
 	{
-		for (int j = 0; j < bSize; j++)
+		for (int j = 0; j < N; j++)
 		{
-			sum += absolute_difference(
-				read_imageui(curr, sampler, (int2)(currPoint.x + i, currPoint.y + j)).x,
-				read_imageui(ref, sampler, (int2)(refPoint.x + i, refPoint.y + j)).x
-			);
+			int current = read_imageui(currentImage, sampler, (int2)(currentPoint.x + i, currentPoint.y + j)).x;
+			int reference = read_imageui(referenceImage, sampler, (int2)(referencePoint.x + i, referencePoint.y + j)).x;
+			sum += current < reference ? reference - current : current - reference;
 		}
 	}
 
@@ -51,7 +46,7 @@ __kernel void ExhaustiveBlockMatchingSAD(
 			//is block within bounds
 			if (referencePoint.y >= 0 && referencePoint.y < (height - N) && referencePoint.x >= 0 && referencePoint.x < (width - N)) { 
 				//calculate sum absolute difference
-				similarityMeasure = sum_absolute_diff(currentFrame, referenceFrame, currentPoint, referencePoint, N);
+				similarityMeasure = SumAbsoluteDifference(currentFrame, referenceFrame, currentPoint, referencePoint, N);
 
 				//prefer nearer blocks
 				float currentDist = sqrt((float)(((referencePoint.x - currentPoint.x) * (referencePoint.x - currentPoint.x)) + ((referencePoint.y - currentPoint.y) * (referencePoint.y - currentPoint.y))));

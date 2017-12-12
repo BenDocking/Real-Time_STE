@@ -534,6 +534,8 @@ void BlockMatchingParallel(uFileHeader hdr, Speckle_Results *sr, cl::Context con
 					if (detailsBuffer[idx].y != 0 || detailsBuffer[idx].y != 0) {
 						arrowedLine(display, pos + offset, mVec + offset, lineColour);
 						arrowedLine(displayBlack, pos + offset, mVec + offset, lineColour);
+						//if (i == 60 && j == 60)
+							//std::cout << pos << ":" << mVec << std::endl;
 					}
 				}
 			}
